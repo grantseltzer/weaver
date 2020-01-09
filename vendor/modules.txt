@@ -1,0 +1,11 @@
+# github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
+github.com/cpuguy83/go-md2man/v2/md2man
+# github.com/iovisor/gobpf v0.0.0-20191212083149-cf081d8fe357
+github.com/iovisor/gobpf/bcc
+github.com/iovisor/gobpf/pkg/cpuonline
+# github.com/russross/blackfriday/v2 v2.0.1
+github.com/russross/blackfriday/v2
+# github.com/shurcooL/sanitized_anchor_name v1.0.0
+github.com/shurcooL/sanitized_anchor_name
+# github.com/urfave/cli/v2 v2.1.1
+github.com/urfave/cli/v2
