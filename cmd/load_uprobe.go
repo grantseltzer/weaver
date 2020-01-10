@@ -25,8 +25,6 @@ const textTemplate = `
 		void* stackAddr = (void*)ctx->sp;
 		{{range $arg_index, $arg_element := .Arguments}}
 		{{$arg_element.CType}} {{$arg_element.VariableName}};
-		void* stackPtr_{{$arg_element.VariableName}} = &stackAddr+{{$arg_element.StartingOffset}};
-		{{$arg_element.CType}}* typeStackPtr_{{$arg_element.VariableName}} = ({{$arg_element.CType}}*)stackPtr_{{$arg_element.VariableName}};
 		bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), stackAddr+{{$arg_element.StartingOffset}}); 
 		events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
 		{{end}}
