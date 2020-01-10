@@ -1,7 +1,7 @@
 # Oster
 
 <p align="center">
-    <img src="DrManhattanGopher.png" alt="gopher" width="150"/>
+    <img src="DrManhattanGopher.png" alt="gopher" width="200"/>
 </p>
 
 
