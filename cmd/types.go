@@ -36,6 +36,8 @@ const (
 	FLOAT32
 	FLOAT64
 	BOOL
+	//TODO:
+	BYTE
 	STRING
 	STRUCT
 	POINTER
@@ -55,6 +57,8 @@ var goTypeToSizeInBytes = map[goType]int{
 	FLOAT32: 4,
 	FLOAT64: 8,
 	BOOL:    1,
+	//TODO:
+	BYTE:    1,
 	STRING:  8,
 	STRUCT:  8,
 	POINTER: 8,
@@ -74,6 +78,8 @@ var goToCType = map[goType]string{
 	FLOAT32: "float",
 	FLOAT64: "double",
 	BOOL:    "char",
+	//TODO:
+	BYTE:    "char",
 	STRING:  "char *",
 	STRUCT:  "void *",
 	POINTER: "void *",
@@ -91,6 +97,9 @@ func stringfFormat(t goType) string {
 		return "%t"
 	case STRING:
 		return "%s"
+	//TODO:
+	case BYTE:
+		return "%c"
 	case STRUCT, POINTER:
 		return "0x%x"
 	default:
@@ -113,6 +122,8 @@ var stringToGoType = map[string]goType{
 	"FLOAT64": FLOAT64,
 	"BOOL":    BOOL,
 	"STRING":  STRING,
+	//TODO:
+	"BYTE":    BYTE,
 	"STRUCT":  STRUCT,
 	"POINTER": POINTER,
 }

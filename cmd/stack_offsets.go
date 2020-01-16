@@ -34,6 +34,10 @@ func determineStackOffsets(context *traceContext) error {
 		currentIndex += typeSize
 		bytesInCurrentWindow += typeSize
 
+		//XXX: In go strings take up 16 bytes on the stack, 8 for the pointer and 8 for length
+		if context.Arguments[i].goType == STRING {
+			currentIndex += 8
+		}
 	}
 
 	return nil
