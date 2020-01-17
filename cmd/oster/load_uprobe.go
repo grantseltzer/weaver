@@ -24,17 +24,14 @@ const textTemplate = `
 		void* stackAddr = (void*)ctx->sp;
 
 		{{range $arg_index, $arg_element := .Arguments}}
-
 		// If this is a string argument
 		if ({{eq $arg_element.CType "char *" }}) {
-			
 			unsigned long {{$arg_element.VariableName}}_length;
 			bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+{{$arg_element.StartingOffset}}+8);
 			if ({{$arg_element.VariableName}}_length > 16 ) {
 				{{$arg_element.VariableName}}_length = 16;
 			}
 			unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
-
 			// use long double to have up to a 16 character string by reading in the raw bytes
 			long double* {{$arg_element.VariableName}}_ptr;
 			long double  {{$arg_element.VariableName}};
@@ -42,13 +39,11 @@ const textTemplate = `
 			bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), stackAddr+{{$arg_element.StartingOffset}});
 			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
 			events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
-
 		} else {
  			{{$arg_element.CType}} {{$arg_element.VariableName}};
 			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), stackAddr+{{$arg_element.StartingOffset}}); 
 			events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
 		}
-
 		{{end}}
 		return 0;
 	}
@@ -156,7 +151,8 @@ func interpretDataByType(data []byte, gt goType) string {
 		return "true"
 	//TODO:
 	case BYTE:
-		return "single byte interpretation is not yet implemented"
+		x1 := binary.LittleEndian.Uint32(data)
+		return fmt.Sprintf("dec=%d\tchar='%c'", x1, x1)
 	case STRING:
 		return fmt.Sprintf("%s", data)
 	case STRUCT:

@@ -5,12 +5,19 @@ ENV = GOOS=linux GOARCH=amd64
 .PHONY: oster
 oster:
 	mkdir -p ./bin
-	$(ENV) go build -o ./bin/oster ./cmd/...
+	$(ENV) go build -o ./bin/oster ./cmd/oster/...
+
+.PHONY: printstack
+printstack:
+	mkdir -p ./bin
+	$(ENV) go build -o ./bin/print-stack ./cmd/print_stack/...
 
 .PHONY: testers
 testers:
 	mkdir -p ./bin
-	$(ENV) go build -o ./bin/test-prog ./test-prog/main.go
+	$(ENV) go build -o ./bin/test-prog ./cmd/test-prog/main.go
+
+
 
 clean:
 	rm ./bin/*
