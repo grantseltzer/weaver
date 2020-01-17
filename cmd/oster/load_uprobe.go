@@ -1,18 +1,16 @@
 package main
 
 import (
-	bpf "github.com/iovisor/gobpf/bcc"
-	"fmt"
 	"bytes"
+	"encoding/binary"
+	"fmt"
+	bpf "github.com/iovisor/gobpf/bcc"
 	"log"
+	"math"
 	"os"
 	"os/signal"
 	"text/template"
-	"math"
-	"encoding/binary"
 )
-
-import "C"
 
 const textTemplate = `
 	#include <uapi/linux/ptrace.h>
@@ -49,7 +47,7 @@ const textTemplate = `
 	}
 `
 
-func bpfText(context *traceContext) string { 
+func bpfText(context *traceContext) string {
 	t := template.New("bpf_text")
 	t, err := t.Parse(textTemplate)
 	if err != nil {
@@ -75,7 +73,7 @@ func createBPFModule(context *traceContext) error {
 	defer bpfModule.Close()
 
 	uprobeFd, err := bpfModule.LoadUprobe("print_symbol_arg")
-	if err != nil { 
+	if err != nil {
 		return err
 	}
 
@@ -104,15 +102,15 @@ func createBPFModule(context *traceContext) error {
 
 		for {
 			value := <-channel
-			
+
 			// based on order of value coming in determine what type it is for interpretation
 			dataTypeOfValue = context.Arguments[index].goType
 
 			valueString := interpretDataByType(value, dataTypeOfValue)
-			fmt.Println(valueString) 
+			fmt.Println(valueString)
 
 			index++
-			index = index%numberOfArgs
+			index = index % numberOfArgs
 		}
 	}()
 
@@ -127,7 +125,7 @@ func createBPFModule(context *traceContext) error {
 // where the value is displayed as a type specified by the goType
 func interpretDataByType(data []byte, gt goType) string {
 
-	switch gt{
+	switch gt {
 
 	case INT8, INT16, INT32, UINT8, UINT16, UINT32:
 		x1 := binary.LittleEndian.Uint32(data)
@@ -147,7 +145,7 @@ func interpretDataByType(data []byte, gt goType) string {
 		x1 := binary.LittleEndian.Uint32(data)
 		if x1 == 0 {
 			return "false"
-		} 
+		}
 		return "true"
 	//TODO:
 	case BYTE:
