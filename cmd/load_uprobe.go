@@ -25,22 +25,23 @@ const textTemplate = `
 
 		{{range $arg_index, $arg_element := .Arguments}}
 
+		// If this is a string argument
 		if ({{eq $arg_element.CType "char *" }}) {
 			
-			//FIXME: Use string length to cut off just string
-			long {{$arg_element.VariableName}}_length;
+			unsigned long {{$arg_element.VariableName}}_length;
 			bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+{{$arg_element.StartingOffset}}+8);
 			if ({{$arg_element.VariableName}}_length > 16 ) {
 				{{$arg_element.VariableName}}_length = 16;
 			}
+			unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
 
-			// If this is a string (use (long double) for up to 16 character string)
+			// use long double to have up to a 16 character string by reading in the raw bytes
 			long double* {{$arg_element.VariableName}}_ptr;
-			long double {{$arg_element.VariableName}};
+			long double  {{$arg_element.VariableName}};
 
 			bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), stackAddr+{{$arg_element.StartingOffset}});
 			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
-			events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
+			events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
 
 		} else {
  			{{$arg_element.CType}} {{$arg_element.VariableName}};
