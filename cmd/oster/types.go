@@ -128,6 +128,27 @@ var stringToGoType = map[string]goType{
 	"POINTER": POINTER,
 }
 
+var goTypeToString = map[goType]string{
+	INT:     "INT",
+	INT8:    "INT8",
+	INT16:   "INT16",
+	INT32:   "INT32",
+	INT64:   "INT64",
+	UINT:    "UINT",
+	UINT8:   "UINT8",
+	UINT16:  "UINT16",
+	UINT32:  "UINT32",
+	UINT64:  "UINT64",
+	FLOAT32: "FLOAT32",
+	FLOAT64: "FLOAT64",
+	BOOL:    "BOOL",
+	STRING:  "STRING",
+	BYTE:    "BYTE",
+	//TODO:
+	STRUCT:  "STRUCT",
+	POINTER: "POINTER",
+}
+
 func listAvailableTypes() {
 	for k, _ := range stringToGoType {
 		fmt.Println(k)

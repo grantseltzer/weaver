@@ -12,7 +12,7 @@ import (
 	"text/template"
 )
 
-const textTemplate = `
+const bpfProgramTextTemplate = `
 	#include <uapi/linux/ptrace.h>
 	#include <linux/string.h>
 
@@ -49,7 +49,7 @@ const textTemplate = `
 
 func bpfText(context *traceContext) string {
 	t := template.New("bpf_text")
-	t, err := t.Parse(textTemplate)
+	t, err := t.Parse(bpfProgramTextTemplate)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,7 +65,10 @@ func bpfText(context *traceContext) string {
 	return buf.String()
 }
 
-func createBPFModule(context *traceContext) error {
+// loadUprobeAndBPFModule will, based on the passed context, install the bpf program and attach a uprobe to the specified function
+// It then prints results to the designated output stream.
+// This blocks until Ctrl-C or error occurs.
+func loadUprobeAndBPFModule(context *traceContext) error {
 
 	// Load eBPF filter and uprobe
 	filterText := bpfText(context)
@@ -107,7 +110,13 @@ func createBPFModule(context *traceContext) error {
 			dataTypeOfValue = context.Arguments[index].goType
 
 			valueString := interpretDataByType(value, dataTypeOfValue)
-			fmt.Println(valueString)
+
+			outputValue := output{
+				Type:  goTypeToString[dataTypeOfValue],
+				Value: valueString,
+			}
+
+			printOutput(outputValue)
 
 			index++
 			index = index % numberOfArgs
@@ -147,12 +156,12 @@ func interpretDataByType(data []byte, gt goType) string {
 			return "false"
 		}
 		return "true"
-	//TODO:
 	case BYTE:
 		x1 := binary.LittleEndian.Uint32(data)
 		return fmt.Sprintf("dec=%d\tchar='%c'", x1, x1)
 	case STRING:
 		return fmt.Sprintf("%s", data)
+	//TODO:
 	case STRUCT:
 		return "struct interpretation is not yet implemented"
 	case POINTER:

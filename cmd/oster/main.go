@@ -9,7 +9,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var globalDebug bool
+var (
+	globalDebug bool
+)
 
 func main() {
 
@@ -86,8 +88,8 @@ func entry(c *cli.Context) error {
 		log.Fatalf("could not determine stack offsets of arguments: %s", err.Error())
 	}
 
-	// Load uprobe
-	err = createBPFModule(&context)
+	// Load uprobe and BPF code. This will block until Ctrl-C or an error occurs.
+	err = loadUprobeAndBPFModule(&context)
 	if err != nil {
 		log.Fatal(err)
 	}
