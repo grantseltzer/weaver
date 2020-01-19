@@ -1,4 +1,4 @@
-default: oster testers
+default: oster testers printstack
 
 ENV = GOOS=linux GOARCH=amd64
 
