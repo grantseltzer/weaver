@@ -41,6 +41,17 @@ Oster will sit idle without any output until `test-prog` is run and the `test_fu
 true
 ```
 
+## Note on supported types
+
+Currently oster supports basic data types but getting support for user defined types is a high priority. Getting following types defined are also a work in progress:
+
+- rune
+- arbitrary pointers
+- arrays
+- slices
+- user/stdlib defined structs
+- user/stdlib defined interfaces
+
 
 ## Dependencies
 
