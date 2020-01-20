@@ -19,9 +19,14 @@ const bpfProgramTextTemplate = `
 	BPF_PERF_OUTPUT(events);
 
 	inline int print_symbol_arg(struct pt_regs *ctx) {
+
 		void* stackAddr = (void*)ctx->sp;
 		{{range $arg_index, $arg_element := .Arguments}}
-		{{if eq $arg_element.CType "char *" }}
+
+		{{if gt $arg_element.ArrayLength 0}}
+		// TODO: eBPF code for reading array
+
+		{{else if eq $arg_element.CType "char *" }}
 		unsigned long {{$arg_element.VariableName}}_length;
 		bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+{{$arg_element.StartingOffset}}+8);
 		if ({{$arg_element.VariableName}}_length > 16 ) {
@@ -35,11 +40,13 @@ const bpfProgramTextTemplate = `
 		bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), stackAddr+{{$arg_element.StartingOffset}});
 		bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
 		events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
+		
 		{{- else }}
 		{{$arg_element.CType}} {{$arg_element.VariableName}};
 		bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), stackAddr+{{$arg_element.StartingOffset}}); 
 		events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
 		{{- end}}
+		
 		{{end}}
 		return 0;
 	}

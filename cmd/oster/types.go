@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -17,6 +19,7 @@ type argument struct {
 	StartingOffset int
 	VariableName   string
 	PrintfFormat   string
+	ArrayLength    int // Set as 0 if not array
 }
 
 type goType int
@@ -157,7 +160,7 @@ func listAvailableTypes() {
 
 type stack []byte
 
-var invalidChars = "+&%$#@!<>/?\";:[]{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
+var invalidChars = "+&%$#@!<>/?\";:{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
 
 func (s *stack) push(v byte) bool {
 
@@ -197,6 +200,8 @@ func parseFunctionAndArgumentTypes(context *traceContext, funcAndArgs string) er
 		}
 
 		if funcAndArgs[i] == ',' {
+
+			//FIXME: Seperate out logic from the ')' section into a function and call for either that or this
 			goType := stringToGoType[strings.ToUpper(parseStack.string())]
 			if goType == INVALID {
 				return fmt.Errorf("invalid go type: %s", parseStack.string())
@@ -206,7 +211,8 @@ func parseFunctionAndArgumentTypes(context *traceContext, funcAndArgs string) er
 				goType:       goType,
 				PrintfFormat: stringfFormat(goType),
 				CType:        goToCType[goType],
-				VariableName: fmt.Sprintf("argument%d", i), //variable name doesn't actually matter, just needs to be unique
+				VariableName: fmt.Sprintf("argument%d", i),
+				ArrayLength:  0,
 			}
 
 			context.Arguments = append(context.Arguments, newArg)
@@ -215,15 +221,29 @@ func parseFunctionAndArgumentTypes(context *traceContext, funcAndArgs string) er
 		}
 
 		if funcAndArgs[i] == ')' {
-			goType := stringToGoType[strings.ToUpper(parseStack.string())]
-			if goType == INVALID {
-				return fmt.Errorf("invalid go type: %s", parseStack.string())
-			}
-			newArg := argument{
-				goType:       goType,
-				PrintfFormat: stringfFormat(goType),
-				CType:        goToCType[goType],
-				VariableName: fmt.Sprintf("argument%d", i),
+
+			var newArg argument
+
+			// This is an array (todo: slice)
+			if strings.Contains(parseStack.string(), "[") {
+				length, goType, err := parseArrayString(parseStack.string())
+				if err != nil {
+					return err
+				}
+				newArg.ArrayLength = length
+				newArg.goType = goType
+				newArg.PrintfFormat = stringfFormat(goType)
+				newArg.CType = goToCType[goType]
+				newArg.VariableName = fmt.Sprintf("argument%d", i)
+			} else {
+				goType := stringToGoType[strings.ToUpper(parseStack.string())]
+				if goType == INVALID {
+					return fmt.Errorf("invalid go type: %s", parseStack.string())
+				}
+				newArg.goType = goType
+				newArg.PrintfFormat = stringfFormat(goType)
+				newArg.CType = goToCType[goType]
+				newArg.VariableName = fmt.Sprintf("argument%d", i)
 			}
 
 			context.Arguments = append(context.Arguments, newArg)
@@ -234,4 +254,30 @@ func parseFunctionAndArgumentTypes(context *traceContext, funcAndArgs string) er
 	}
 
 	return nil
+}
+
+func parseArrayString(s string) (int, goType, error) {
+	subs := strings.Split(s, "[")
+	if len(subs) != 2 && subs[0] != "" {
+		return -1, INVALID, errors.New("malformed array parameter")
+	}
+
+	subs = strings.Split(subs[1], "]")
+	if len(subs) != 2 {
+		return -1, INVALID, errors.New("malformed array parameter")
+	}
+
+	length, err := strconv.Atoi(subs[0])
+	if err != nil {
+		return -1, INVALID, errors.New("malformed array length")
+
+	}
+	fmt.Printf(">%s<\n", subs[1])
+
+	gotype := stringToGoType[strings.ToUpper(subs[1])]
+	if gotype == INVALID {
+		return -1, INVALID, errors.New("malformed array type")
+	}
+
+	return length, gotype, nil
 }

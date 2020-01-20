@@ -31,6 +31,16 @@ func determineStackOffsets(context *traceContext) error {
 		}
 
 		context.Arguments[i].StartingOffset = currentIndex
+
+		if context.Arguments[i].ArrayLength > 0 {
+			if context.Arguments[i].goType == STRING {
+				typeSize = 16
+			}
+			currentIndex += typeSize * context.Arguments[i].ArrayLength
+			bytesInCurrentWindow += (typeSize * context.Arguments[i].ArrayLength) % windowSize
+			continue
+		}
+
 		currentIndex += typeSize
 		bytesInCurrentWindow += typeSize
 
@@ -38,6 +48,7 @@ func determineStackOffsets(context *traceContext) error {
 		if context.Arguments[i].goType == STRING {
 			currentIndex += 8
 		}
+
 	}
 
 	return nil
