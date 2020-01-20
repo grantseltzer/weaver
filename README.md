@@ -42,15 +42,16 @@ true
 ```
 
 
-## Build
-
-`make oster` will compile the oster binary to `bin/oster`
-
 ## Dependencies
 
 - bcc
 - linux kernel version > 4.14 (please make bug reports if your kernel version doesn't work)
 
+## Build
+
+`make oster` will compile the oster binary to `bin/oster`
+
+<i>Can't build? Please make an issue!</i>
 
 ## Roadmap
 
