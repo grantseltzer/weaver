@@ -19,6 +19,7 @@ type argument struct {
 	StartingOffset int
 	VariableName   string
 	PrintfFormat   string
+	TypeSize       int
 	ArrayLength    int // Set as 0 if not array
 }
 
@@ -199,58 +200,44 @@ func parseFunctionAndArgumentTypes(context *traceContext, funcAndArgs string) er
 			continue
 		}
 
-		if funcAndArgs[i] == ',' {
+		if funcAndArgs[i] == ',' || funcAndArgs[i] == ')' {
+			var arg argument
+			arg.VariableName = fmt.Sprintf("argument%d", i)
+			populateArgumentValues(parseStack, &arg)
+			context.Arguments = append(context.Arguments, arg)
 
-			//FIXME: Seperate out logic from the ')' section into a function and call for either that or this
-			goType := stringToGoType[strings.ToUpper(parseStack.string())]
-			if goType == INVALID {
-				return fmt.Errorf("invalid go type: %s", parseStack.string())
+			if funcAndArgs[i] == ',' {
+				parseStack.clear()
+				continue
 			}
-
-			newArg := argument{
-				goType:       goType,
-				PrintfFormat: stringfFormat(goType),
-				CType:        goToCType[goType],
-				VariableName: fmt.Sprintf("argument%d", i),
-				ArrayLength:  0,
-			}
-
-			context.Arguments = append(context.Arguments, newArg)
-			parseStack.clear()
-			continue
-		}
-
-		if funcAndArgs[i] == ')' {
-
-			var newArg argument
-
-			// This is an array (todo: slice)
-			if strings.Contains(parseStack.string(), "[") {
-				length, goType, err := parseArrayString(parseStack.string())
-				if err != nil {
-					return err
-				}
-				newArg.ArrayLength = length
-				newArg.goType = goType
-				newArg.PrintfFormat = stringfFormat(goType)
-				newArg.CType = goToCType[goType]
-				newArg.VariableName = fmt.Sprintf("argument%d", i)
-			} else {
-				goType := stringToGoType[strings.ToUpper(parseStack.string())]
-				if goType == INVALID {
-					return fmt.Errorf("invalid go type: %s", parseStack.string())
-				}
-				newArg.goType = goType
-				newArg.PrintfFormat = stringfFormat(goType)
-				newArg.CType = goToCType[goType]
-				newArg.VariableName = fmt.Sprintf("argument%d", i)
-			}
-
-			context.Arguments = append(context.Arguments, newArg)
 			return nil
 		}
 
 		parseStack.push(funcAndArgs[i])
+	}
+
+	return nil
+}
+
+func populateArgumentValues(parseStack *stack, arg *argument) error {
+
+	if strings.Contains(parseStack.string(), "[") {
+		length, goType, err := parseArrayString(parseStack.string())
+		if err != nil {
+			return err
+		}
+		arg.ArrayLength = length
+		arg.goType = goType
+		arg.PrintfFormat = stringfFormat(goType)
+		arg.CType = goToCType[goType]
+	} else {
+		goType := stringToGoType[strings.ToUpper(parseStack.string())]
+		if goType == INVALID {
+			return fmt.Errorf("invalid go type: %s", parseStack.string())
+		}
+		arg.goType = goType
+		arg.PrintfFormat = stringfFormat(goType)
+		arg.CType = goToCType[goType]
 	}
 
 	return nil

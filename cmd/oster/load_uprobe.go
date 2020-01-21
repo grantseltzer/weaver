@@ -24,7 +24,15 @@ const bpfProgramTextTemplate = `
 		{{range $arg_index, $arg_element := .Arguments}}
 
 		{{if gt $arg_element.ArrayLength 0}}
-		// TODO: eBPF code for reading array
+
+		unsigned int i;
+		void* loopAddr = stackAddr+{{$arg_element.StartingOffset}};
+		for (i = 0; i < {{$arg_element.ArrayLength}}; i++) {
+			{{$arg_element.CType}} {{$arg_element.VariableName}};
+			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), loopAddr); 
+			events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
+			loopAddr += {{$arg_element.TypeSize}}; //FIXME:
+		}
 
 		{{else if eq $arg_element.CType "char *" }}
 		unsigned long {{$arg_element.VariableName}}_length;
