@@ -23,6 +23,7 @@ func determineStackOffsets(context *traceContext) error {
 
 	for i := range context.Arguments {
 		typeSize := goTypeToSizeInBytes[context.Arguments[i].goType]
+		context.Arguments[i].TypeSize = typeSize
 
 		if typeSize+bytesInCurrentWindow > windowSize {
 			// Doesn't fit, move index ahead for padding, clear current window
