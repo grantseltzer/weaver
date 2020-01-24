@@ -259,7 +259,6 @@ func parseArrayString(s string) (int, goType, error) {
 		return -1, INVALID, errors.New("malformed array length")
 
 	}
-	fmt.Printf(">%s<\n", subs[1])
 
 	gotype := stringToGoType[strings.ToUpper(subs[1])]
 	if gotype == INVALID {

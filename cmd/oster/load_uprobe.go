@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"strings"
 	"text/template"
 
 	bpf "github.com/iovisor/gobpf/bcc"
@@ -209,7 +210,8 @@ func interpretDataByType(data []byte, gt goType) string {
 		x1 := binary.LittleEndian.Uint32(data)
 		return fmt.Sprintf("dec=%d\tchar='%c'", x1, x1)
 	case STRING:
-		return fmt.Sprintf("%s", data)
+		stringValue := strings.SplitN(string(data), "\u0000", 2)
+		return fmt.Sprintf("'%s'", stringValue[0])
 	//TODO:
 	case STRUCT:
 		return "struct interpretation is not yet implemented"
