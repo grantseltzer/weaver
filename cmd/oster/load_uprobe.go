@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	bpf "github.com/iovisor/gobpf/bcc"
 	"log"
 	"math"
 	"os"
 	"os/signal"
 	"text/template"
+
+	bpf "github.com/iovisor/gobpf/bcc"
 )
 
 const bpfProgramTextTemplate = `
@@ -116,23 +117,37 @@ func loadUprobeAndBPFModule(context *traceContext) error {
 
 	go func() {
 
+		var valueString string
+		var outputValue output
 		for {
+
 			value := <-channel
 
 			// based on order of value coming in determine what type it is for interpretation
 			dataTypeOfValue = context.Arguments[index].goType
 
 			if context.Arguments[index].ArrayLength > 0 {
-				//TODO:
-				// Read from channel ArrayLength - 1 more times, combine all the values into a single string,
-				// and set the type string to array of gotype
-			}
 
-			valueString := interpretDataByType(value, dataTypeOfValue)
+				arrayValueString := interpretDataByType(value, dataTypeOfValue)
 
-			outputValue := output{
-				Type:  goTypeToString[dataTypeOfValue],
-				Value: valueString,
+				for i := 0; i < context.Arguments[index].ArrayLength-1; i++ {
+					value := <-channel
+					valueString = interpretDataByType(value, dataTypeOfValue)
+					arrayValueString = arrayValueString + ", " + valueString
+				}
+				outputValue = output{
+					Type:  goTypeToString[dataTypeOfValue],
+					Value: arrayValueString,
+				}
+
+			} else {
+
+				valueString = interpretDataByType(value, dataTypeOfValue)
+
+				outputValue = output{
+					Type:  goTypeToString[dataTypeOfValue],
+					Value: valueString,
+				}
 			}
 
 			printOutput(outputValue)
