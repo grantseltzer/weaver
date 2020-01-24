@@ -1,8 +1,8 @@
 package main
 
 //go:noinline
-func test_function(a string, b byte, x int) {}
+func test_function(int, [2]int) {}
 
 func main() {
-	test_function("grant", byte(1), 7)
+	test_function(3, [2]int{1, 2})
 }

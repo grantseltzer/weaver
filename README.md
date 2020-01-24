@@ -47,7 +47,6 @@ Currently oster supports basic data types but getting support for user defined t
 
 - rune
 - arbitrary pointers
-- arrays
 - slices
 - user/stdlib defined structs
 - user/stdlib defined interfaces
@@ -55,7 +54,7 @@ Currently oster supports basic data types but getting support for user defined t
 
 ## Dependencies
 
-- bcc
+- [bcc](https://github.com/iovisor/bcc/blob/master/INSTALL.md)
 - linux kernel version > 4.14 (please make bug reports if your kernel version doesn't work)
 
 ## Build
