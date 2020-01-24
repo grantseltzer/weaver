@@ -29,12 +29,29 @@ const bpfProgramTextTemplate = `
 		unsigned int i_{{$arg_element.VariableName}};
 		void* loopAddr_{{$arg_element.VariableName}} = stackAddr+{{$arg_element.StartingOffset}};
 		for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < {{$arg_element.ArrayLength}}; i_{{$arg_element.VariableName}}++) {
+			{{if ne $arg_element.CType "char *" }} 
 			{{$arg_element.CType}} {{$arg_element.VariableName}};
 			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), loopAddr_{{$arg_element.VariableName}}); 
 			events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
 			loopAddr_{{$arg_element.VariableName}} += {{$arg_element.TypeSize}};
+			{{else}}
+			unsigned long {{$arg_element.VariableName}}_length;
+			bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), loopAddr_{{$arg_element.VariableName}}+8);
+			if ({{$arg_element.VariableName}}_length > 16 ) {
+				{{$arg_element.VariableName}}_length = 16;
+			}
+			unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
+			
+			// use long double to have up to a 16 character string by reading in the raw bytes
+			long double* {{$arg_element.VariableName}}_ptr;
+			long double  {{$arg_element.VariableName}};
+			bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), loopAddr_{{$arg_element.VariableName}});
+			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
+		
+			events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
+			loopAddr_{{$arg_element.VariableName}} += 16;
+			{{end}}
 		}
-
 		{{else if eq $arg_element.CType "char *" }}
 		unsigned long {{$arg_element.VariableName}}_length;
 		bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+{{$arg_element.StartingOffset}}+8);
@@ -49,13 +66,11 @@ const bpfProgramTextTemplate = `
 		bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), stackAddr+{{$arg_element.StartingOffset}});
 		bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
 		events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
-		
 		{{- else }}
 		{{$arg_element.CType}} {{$arg_element.VariableName}};
 		bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), stackAddr+{{$arg_element.StartingOffset}}); 
 		events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
 		{{- end}}
-		
 		{{end}}
 		return 0;
 	}
@@ -136,7 +151,7 @@ func loadUprobeAndBPFModule(context *traceContext) error {
 					arrayValueString = arrayValueString + ", " + valueString
 				}
 				outputValue = output{
-					Type:  goTypeToString[dataTypeOfValue],
+					Type:  goTypeToString[dataTypeOfValue] + "_ARRAY",
 					Value: arrayValueString,
 				}
 
