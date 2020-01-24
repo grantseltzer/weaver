@@ -25,13 +25,13 @@ const bpfProgramTextTemplate = `
 
 		{{if gt $arg_element.ArrayLength 0}}
 
-		unsigned int i;
-		void* loopAddr = stackAddr+{{$arg_element.StartingOffset}};
-		for (i = 0; i < {{$arg_element.ArrayLength}}; i++) {
+		unsigned int i_{{$arg_element.VariableName}};
+		void* loopAddr_{{$arg_element.VariableName}} = stackAddr+{{$arg_element.StartingOffset}};
+		for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < {{$arg_element.ArrayLength}}; i_{{$arg_element.VariableName}}++) {
 			{{$arg_element.CType}} {{$arg_element.VariableName}};
-			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), loopAddr); 
+			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), loopAddr_{{$arg_element.VariableName}}); 
 			events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
-			loopAddr += {{$arg_element.TypeSize}}; //FIXME:
+			loopAddr_{{$arg_element.VariableName}} += {{$arg_element.TypeSize}};
 		}
 
 		{{else if eq $arg_element.CType "char *" }}
@@ -121,6 +121,12 @@ func loadUprobeAndBPFModule(context *traceContext) error {
 
 			// based on order of value coming in determine what type it is for interpretation
 			dataTypeOfValue = context.Arguments[index].goType
+
+			if context.Arguments[index].ArrayLength > 0 {
+				//TODO:
+				// Read from channel ArrayLength - 1 more times, combine all the values into a single string,
+				// and set the type string to array of gotype
+			}
 
 			valueString := interpretDataByType(value, dataTypeOfValue)
 
