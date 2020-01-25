@@ -42,6 +42,7 @@ const (
 	BOOL
 	STRING
 	BYTE
+	RUNE
 	//TODO:
 	STRUCT
 	POINTER
@@ -62,6 +63,7 @@ var goTypeToSizeInBytes = map[goType]int{
 	FLOAT64: 8,
 	BOOL:    1,
 	BYTE:    1,
+	RUNE:    4,
 	STRING:  8,
 	//TODO:
 	STRUCT:  8,
@@ -84,6 +86,7 @@ var goToCType = map[goType]string{
 	BOOL:    "char",
 	BYTE:    "char",
 	STRING:  "char *",
+	RUNE:    "int",
 	//TODO:
 	STRUCT:  "void *",
 	POINTER: "void *",
@@ -102,6 +105,8 @@ func stringfFormat(t goType) string {
 	case STRING:
 		return "%s"
 	case BYTE:
+		return "%c"
+	case RUNE:
 		return "%c"
 	//TODO:
 	case STRUCT, POINTER:
@@ -127,6 +132,7 @@ var stringToGoType = map[string]goType{
 	"BOOL":    BOOL,
 	"STRING":  STRING,
 	"BYTE":    BYTE,
+	"RUNE":    RUNE,
 	//TODO:
 	"STRUCT":  STRUCT,
 	"POINTER": POINTER,
@@ -148,6 +154,7 @@ var goTypeToString = map[goType]string{
 	BOOL:    "BOOL",
 	STRING:  "STRING",
 	BYTE:    "BYTE",
+	RUNE:    "RUNE",
 	//TODO:
 	STRUCT:  "STRUCT",
 	POINTER: "POINTER",

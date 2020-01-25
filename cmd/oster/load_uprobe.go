@@ -199,7 +199,7 @@ func interpretDataByType(data []byte, gt goType) string {
 	case FLOAT64:
 		x1 := binary.LittleEndian.Uint64(data)
 		val := math.Float64frombits(x1)
-		return fmt.Sprintf("%f", val)
+		return fmt.Sprintf(stringfFormat(gt), val)
 	case BOOL:
 		x1 := binary.LittleEndian.Uint32(data)
 		if x1 == 0 {
@@ -212,6 +212,9 @@ func interpretDataByType(data []byte, gt goType) string {
 	case STRING:
 		stringValue := strings.SplitN(string(data), "\u0000", 2)
 		return fmt.Sprintf("'%s'", stringValue[0])
+	case RUNE:
+		x1 := binary.LittleEndian.Uint32(data)
+		return fmt.Sprintf(stringfFormat(gt), int(x1))
 	//TODO:
 	case STRUCT:
 		return "struct interpretation is not yet implemented"
