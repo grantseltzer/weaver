@@ -45,7 +45,6 @@ true
 
 Currently oster supports basic data types but getting support for user defined types is a high priority. Getting following types defined are also a work in progress:
 
-- rune
 - arbitrary pointers
 - slices
 - user/stdlib defined structs
