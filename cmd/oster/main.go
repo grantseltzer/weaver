@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
@@ -20,9 +22,9 @@ func main() {
 		Usage: "Trace specific executions in Go programs",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "function-to-trace",
+				Name:     "functions-file",
 				Value:    "",
-				Usage:    "specify function name and arguments of the form: 'func-name(arg1_type, arg2_type, ...)'. Use oster --types for list of accepted types.",
+				Usage:    "specify a file which contains line sperated specifications of functions to trace. Each line is of the form: 'func-name(arg1_type, arg2_type, ...)'. Use `oster --types` for a list of accepted types.",
 				Required: false,
 				Aliases:  []string{"f"},
 			},
@@ -58,6 +60,12 @@ func main() {
 
 func entry(c *cli.Context) error {
 
+	var (
+		contexts []functionTraceContext
+		err      error
+	)
+
+	// Turn on debug logigng
 	if c.Bool("debug") {
 		globalDebug = true
 	}
@@ -68,30 +76,36 @@ func entry(c *cli.Context) error {
 		return nil
 	}
 
-	// Initialize tracing info
-	var context traceContext
-
-	fullPath, err := filepath.Abs(c.Args().Get(0))
+	binaryFullPath, err := filepath.Abs(c.Args().Get(0))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	context.binaryName = fullPath
+	functionsFilePath := c.String("functions-file")
 
-	err = parseFunctionAndArgumentTypes(&context, c.String("function-to-trace"))
-	if err != nil {
-		log.Fatal(err)
+	// Read in functions file
+	if functionsFilePath != "" {
+		contexts, err = read_functions_file(functionsFilePath)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = determineStackOffsets(&context)
-	if err != nil {
-		log.Fatalf("could not determine stack offsets of arguments: %s", err.Error())
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, os.Kill)
+	runtimeContext, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Install eBPF program for each function to trace
+	for i := range contexts {
+
+		contexts[i].binaryName = binaryFullPath
+
+		// Load uprobe and BPF code. This will block until Ctrl-C or an error occurs.
+		go loadUprobeAndBPFModule(&contexts[i], runtimeContext)
 	}
 
-	// Load uprobe and BPF code. This will block until Ctrl-C or an error occurs.
-	err = loadUprobeAndBPFModule(&context)
-	if err != nil {
-		log.Fatal(err)
-	}
+	<-sig
+
 	return nil
 }

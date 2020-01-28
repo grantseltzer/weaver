@@ -2,12 +2,11 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"log"
 	"math"
-	"os"
-	"os/signal"
 	"strings"
 	"text/template"
 
@@ -77,7 +76,7 @@ const bpfProgramTextTemplate = `
 	}
 `
 
-func bpfText(context *traceContext) string {
+func bpfText(context *functionTraceContext) string {
 	t := template.New("bpf_text")
 	t, err := t.Parse(bpfProgramTextTemplate)
 	if err != nil {
@@ -98,10 +97,10 @@ func bpfText(context *traceContext) string {
 // loadUprobeAndBPFModule will, based on the passed context, install the bpf program and attach a uprobe to the specified function
 // It then prints results to the designated output stream.
 // This blocks until Ctrl-C or error occurs.
-func loadUprobeAndBPFModule(context *traceContext) error {
+func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext context.Context) error {
 
 	// Load eBPF filter and uprobe
-	filterText := bpfText(context)
+	filterText := bpfText(traceContext)
 	bpfModule := bpf.NewModule(filterText, []string{})
 	defer bpfModule.Close()
 
@@ -110,7 +109,7 @@ func loadUprobeAndBPFModule(context *traceContext) error {
 		return err
 	}
 
-	err = bpfModule.AttachUprobe(context.binaryName, context.functionName, uprobeFd, -1)
+	err = bpfModule.AttachUprobe(traceContext.binaryName, traceContext.functionName, uprobeFd, -1)
 	if err != nil {
 		return fmt.Errorf("could not attach uprobe to symbol: %s: %s", "test_function", err.Error())
 	}
@@ -124,10 +123,7 @@ func loadUprobeAndBPFModule(context *traceContext) error {
 		return err
 	}
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, os.Kill)
-
-	numberOfArgs := len(context.Arguments)
+	numberOfArgs := len(traceContext.Arguments)
 	var index int
 	var dataTypeOfValue goType
 
@@ -137,16 +133,25 @@ func loadUprobeAndBPFModule(context *traceContext) error {
 		var outputValue output
 		for {
 
+			/*
+				TODO:
+				- Instead of just printing the output of each arg as it comes in,
+				  batch them into a single structure so as to match the results
+				  to a single function invocation.
+				- This should include the function name, and process information
+			*/
+
 			value := <-channel
 
-			// based on order of value coming in determine what type it is for interpretation
-			dataTypeOfValue = context.Arguments[index].goType
+			// Determine what type it is for interpretation based on order of value coming in
+			dataTypeOfValue = traceContext.Arguments[index].goType
 
-			if context.Arguments[index].ArrayLength > 0 {
+			// If this argument is an array
+			if traceContext.Arguments[index].ArrayLength > 0 {
 
 				arrayValueString := interpretDataByType(value, dataTypeOfValue)
 
-				for i := 0; i < context.Arguments[index].ArrayLength-1; i++ {
+				for i := 0; i < traceContext.Arguments[index].ArrayLength-1; i++ {
 					value := <-channel
 					valueString = interpretDataByType(value, dataTypeOfValue)
 					arrayValueString = arrayValueString + ", " + valueString
@@ -157,6 +162,7 @@ func loadUprobeAndBPFModule(context *traceContext) error {
 				}
 
 			} else {
+				// This argument is not an array
 
 				valueString = interpretDataByType(value, dataTypeOfValue)
 
@@ -174,7 +180,7 @@ func loadUprobeAndBPFModule(context *traceContext) error {
 	}()
 
 	perfMap.Start()
-	<-sig
+	<-runtimeContext.Done()
 	perfMap.Stop()
 
 	return nil
