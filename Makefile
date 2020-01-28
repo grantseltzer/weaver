@@ -1,29 +1,37 @@
-default: oster testers printstack
+GOENV = GOOS=linux GOARCH=amd64
+SHELL := bash
+.ONESHELL:
+.SHELLFLAGS := -eu -o pipefail -c
+.DELETE_ON_ERROR:
+MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules
 
-ENV = GOOS=linux GOARCH=amd64
+ifeq ($(origin .RECIPEPREFIX), undefined)
+  $(error This Make does not support .RECIPEPREFIX. Please use GNU Make 4.0 or later)
+endif
+.RECIPEPREFIX = >
 
-.PHONY: oster
-oster:
-	mkdir -p ./bin
-	$(ENV) go build -o ./bin/oster ./cmd/oster/...
+default: oster dummies printstack
 
-.PHONY: printstack
-printstack:
-	mkdir -p ./bin
-	$(ENV) go build -o ./bin/print-stack ./cmd/print_stack/...
+bin/oster: cmd/oster
+> mkdir -p ./bin
+> $(GOENV) go build -o ./bin/oster ./cmd/oster/...
 
-.PHONY: testers
-testers:
-	mkdir -p ./bin
-	$(ENV) go build -o ./bin/test-prog ./cmd/test-prog/main.go
+bin/printstack: cmd/oster
+> mkdir -p ./bin
+> $(GOENV) go build -o ./bin/print-stack ./cmd/print_stack/...
 
+bin/dummies: cmd/dummies
+> mkdir -p ./bin
+> $(GOENV) go build -o ./bin/dummies ./cmd/dummies/main.go
 
-
+.PHONY: clean
 clean:
-	rm ./bin/*
+> rm ./bin/*
 
+.PHONY: clean
 help:
-	@echo  "Targets:"
-	@echo  "    oster (default) - build oster cli to ./bin/oster"
-	@echo  "    testers - build test programs to run oster on"
-	@echo  "    clean - clear out bin"
+> @echo  "Targets:"
+> @echo  "    oster (default) - build oster cli to ./bin/oster"
+> @echo  "    dummies - build dummy programs to run oster on"
+> @echo  "    clean - clear out bin"
