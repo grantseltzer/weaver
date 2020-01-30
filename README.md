@@ -12,33 +12,70 @@ Oster is a CLI tool that allows you to trace Go programs in order to inspect wha
 
 Take the following example program: 
 
-```
+<i>test_prog.go</i>
+```go
 package main
 
 //go:noinline
-func test_function(a int, d int32, e float64, r bool) {}
+func test_function(int, [2]int) {}
+
+//go:noinline
+func other_test_function(rune, int64) {}
 
 func main() {
-	test_function(1, 2, 55555.111, true)
+	test_function(3, [2]int{1, 2})
+	other_test_function('a', 33)
 }
-```
-
-Let's say we want to know what values are passed to `test_function` whenever the program is run. Once the program is compiled we can call oster like this:
 
 ```
-sudo oster --function-to-trace='main.test_function(int, int32, float64, bool)' ./test-prog
+
+Let's say we want to know what values are passed to `test_function` and `other_test_function` whenever the program is run. Once the program is compiled (`make`) we just have to create a file which specifies each function to trace:
+
+<i>functions_to_trace.txt</i>
+```
+main.test_function(int, [2]int)
+main.other_test_function(rune, int64)
 ```
 
 Notice that we have to specify the parameter data types. <i>(You can use `oster --types` to see what data types are supported.)</i>
 
-Oster will sit idle without any output until `test-prog` is run and the `test_function` function is called. This will also work on a running Go Program.
+Now we can call `oster` like so:
 
 ```
-[*] sudo ./bin/oster --function-to-trace='main.test_function(int, int32, float64, bool)' ./bin/test-prog&; sleep 1 && ./bin/test-prog
-1
-2                                                                                                                                       
-55555.111000
-true
+sudo ./bin/oster -f ./cmd/test-prog/test_functions_file.txt ./bin/test-prog | jq
+```
+
+
+Oster will then sit idle without any output until `test-prog` is run and the `test_function` function is called. This will also work on a running Go Program.
+
+```json
+{
+  "FunctionName": "main.other_test_function",
+  "Args": [
+    {
+      "Type": "RUNE",
+      "Value": "a"
+    },
+    {
+      "Type": "INT64",
+      "Value": "33"
+    }
+  ]
+}
+{
+  "FunctionName": "main.test_function",
+  "Args": [
+    {
+      "Type": "INT",
+      "Value": "3"
+    },
+    {
+      "Type": "INT_ARRAY",
+      "Value": "1, 2"
+    }
+  ]
+}
+
 ```
 
 ## Note on supported types
@@ -70,7 +107,6 @@ Short term goals include:
 
 - Testing
 - Output options
-- Tracing multiple functions at a time
 - Deep pointer inspection
 - Inspecting binaries for parameter data types instead of specifying them at the command line
 - CI/CD infrastructre 

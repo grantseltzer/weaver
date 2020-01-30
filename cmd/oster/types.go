@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type traceContext struct {
+type functionTraceContext struct {
 	binaryName   string
 	functionName string
 	Arguments    []argument
@@ -168,8 +168,6 @@ func listAvailableTypes() {
 
 type stack []byte
 
-var invalidChars = "+&%$#@!<>/?\";:{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
-
 func (s *stack) push(v byte) bool {
 
 	if v == ' ' {
@@ -188,11 +186,13 @@ func (s *stack) string() string {
 	return string(*s)
 }
 
-// parseFunctionAndArgumentTypes populates the traceContext based on the function and argument types
+// parseFunctionAndArgumentTypes populates the functionTraceContext based on the function and argument types
 // of the form 'func_name(type1, type2)'.
-func parseFunctionAndArgumentTypes(context *traceContext, funcAndArgs string) error {
+func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs string) error {
 
 	parseStack := &stack{}
+
+	var invalidChars = "+&%$#@!<>/?\";:{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
 
 	for i := range funcAndArgs {
 

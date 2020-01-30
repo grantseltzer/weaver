@@ -7,7 +7,7 @@ package main
 // - If it would go over a limit window then pad until back at 0, add it, then continue
 //
 
-func determineStackOffsets(context *traceContext) error {
+func determineStackOffsets(context *functionTraceContext) error {
 
 	var windowSize = 0
 
@@ -22,6 +22,7 @@ func determineStackOffsets(context *traceContext) error {
 	bytesInCurrentWindow := 0
 
 	for i := range context.Arguments {
+
 		typeSize := goTypeToSizeInBytes[context.Arguments[i].goType]
 		context.Arguments[i].TypeSize = typeSize
 
