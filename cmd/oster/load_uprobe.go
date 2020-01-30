@@ -126,20 +126,14 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 	numberOfArgs := len(traceContext.Arguments)
 	var index int
 	var dataTypeOfValue goType
+	output := output{FunctionName: traceContext.functionName}
+	var argOutput = make([]outputArg, numberOfArgs)
 
 	go func() {
 
 		var valueString string
-		var outputValue output
+		var outputValue outputArg
 		for {
-
-			/*
-				TODO:
-				- Instead of just printing the output of each arg as it comes in,
-				  batch them into a single structure so as to match the results
-				  to a single function invocation.
-				- This should include the function name, and process information
-			*/
 
 			value := <-channel
 
@@ -156,7 +150,7 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 					valueString = interpretDataByType(value, dataTypeOfValue)
 					arrayValueString = arrayValueString + ", " + valueString
 				}
-				outputValue = output{
+				outputValue = outputArg{
 					Type:  goTypeToString[dataTypeOfValue] + "_ARRAY",
 					Value: arrayValueString,
 				}
@@ -166,16 +160,21 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 
 				valueString = interpretDataByType(value, dataTypeOfValue)
 
-				outputValue = output{
+				outputValue = outputArg{
 					Type:  goTypeToString[dataTypeOfValue],
 					Value: valueString,
 				}
 			}
 
-			printOutput(outputValue)
-
+			argOutput[index] = outputValue
 			index++
 			index = index % numberOfArgs
+
+			if index == 0 {
+				output.Args = argOutput
+				printOutput(output)
+			}
+
 		}
 	}()
 

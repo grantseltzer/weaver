@@ -6,6 +6,11 @@ import (
 )
 
 type output struct {
+	FunctionName string
+	Args         []outputArg
+}
+
+type outputArg struct {
 	Type  string
 	Value string
 }
