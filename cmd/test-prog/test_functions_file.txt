@@ -1,2 +1,0 @@
-main.test_function(int, [2]int)
-main.other_test_function(rune, int64)
