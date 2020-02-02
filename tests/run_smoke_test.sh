@@ -11,7 +11,11 @@ TEST_FUNCTIONS_FILE="./tests/test_data/functions_file.txt"
 REFERENCE_FILE="./tests/test_data/tester_output_sorted_slurped.json"
 OUTPUT_FILE=$(mktemp /tmp/oster-smoke-test.XXXXXX)
 
-chmod 644 $OUTPUT_FILE
+# Check needed files exists
+test -f ./bin/oster
+test -f ./bin/tester
+test -f $REFERENCE_FILE
+test -f $TEST_FUNCTIONS_FILE
 
 echo "[*] Running Oster with $TEST_FUNCTIONS_FILE"
 
