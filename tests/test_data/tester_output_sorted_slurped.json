@@ -1,0 +1,510 @@
+[
+  {
+    "FunctionName": "main.test_bool_array",
+    "Args": [
+      {
+        "Type": "BOOL_ARRAY",
+        "Value": "true, true"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_byte_array",
+    "Args": [
+      {
+        "Type": "BYTE_ARRAY",
+        "Value": "dec=3\tchar='\u0003', dec=9\tchar='\t'"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_bool",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "BOOL",
+        "Value": "true"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_byte",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "BYTE",
+        "Value": "dec=3\tchar='\u0003'"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_int",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "INT",
+        "Value": "3"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_int16",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "INT16",
+        "Value": "15398"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_int32",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "INT32",
+        "Value": "332"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_int64",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "INT64",
+        "Value": "364"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_int8",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "INT8",
+        "Value": "38"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_rune",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "RUNE",
+        "Value": "b"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_string",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "STRING",
+        "Value": "'boo'"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_uint",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "UINT",
+        "Value": "12"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_uint16",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "UINT16",
+        "Value": "49280"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_uint32",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "UINT32",
+        "Value": "1232"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_uint64",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "UINT64",
+        "Value": "1264"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_combined_uint8",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=2\tchar='\u0002'"
+      },
+      {
+        "Type": "UINT8",
+        "Value": "128"
+      },
+      {
+        "Type": "FLOAT32",
+        "Value": "3.000000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_int16_array",
+    "Args": [
+      {
+        "Type": "INT16_ARRAY",
+        "Value": "166, 934"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_int32_array",
+    "Args": [
+      {
+        "Type": "INT32_ARRAY",
+        "Value": "1325, 512"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_int64_array",
+    "Args": [
+      {
+        "Type": "INT64_ARRAY",
+        "Value": "51, 77"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_int8_array",
+    "Args": [
+      {
+        "Type": "INT8_ARRAY",
+        "Value": "1, 5"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_int_array",
+    "Args": [
+      {
+        "Type": "INT_ARRAY",
+        "Value": "5, 7"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_rune_array",
+    "Args": [
+      {
+        "Type": "RUNE_ARRAY",
+        "Value": "a, b"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_bool",
+    "Args": [
+      {
+        "Type": "BOOL",
+        "Value": "true"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_byte",
+    "Args": [
+      {
+        "Type": "BYTE",
+        "Value": "dec=97\tchar='a'"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_float32",
+    "Args": [
+      {
+        "Type": "FLOAT32",
+        "Value": "1.100000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_float64",
+    "Args": [
+      {
+        "Type": "FLOAT64",
+        "Value": "1.100000e+00"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_int",
+    "Args": [
+      {
+        "Type": "INT",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_int16",
+    "Args": [
+      {
+        "Type": "INT16",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_int32",
+    "Args": [
+      {
+        "Type": "INT32",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_int64",
+    "Args": [
+      {
+        "Type": "INT64",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_int8",
+    "Args": [
+      {
+        "Type": "INT8",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_rune",
+    "Args": [
+      {
+        "Type": "RUNE",
+        "Value": "a"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_string",
+    "Args": [
+      {
+        "Type": "STRING",
+        "Value": "'a'"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_uint",
+    "Args": [
+      {
+        "Type": "UINT",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_uint16",
+    "Args": [
+      {
+        "Type": "UINT16",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_uint32",
+    "Args": [
+      {
+        "Type": "UINT32",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_uint64",
+    "Args": [
+      {
+        "Type": "UINT64",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_single_uint8",
+    "Args": [
+      {
+        "Type": "UINT8",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_string_array",
+    "Args": [
+      {
+        "Type": "STRING_ARRAY",
+        "Value": "'boo', 'bah'"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_uint16_array",
+    "Args": [
+      {
+        "Type": "UINT16_ARRAY",
+        "Value": "951, 123"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_uint32_array",
+    "Args": [
+      {
+        "Type": "UINT32_ARRAY",
+        "Value": "5135, 512321"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_uint64_array",
+    "Args": [
+      {
+        "Type": "UINT64_ARRAY",
+        "Value": "412412456, 1234134"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_uint8_array",
+    "Args": [
+      {
+        "Type": "UINT8_ARRAY",
+        "Value": "15, 55"
+      }
+    ]
+  },
+  {
+    "FunctionName": "main.test_uint_array",
+    "Args": [
+      {
+        "Type": "UINT_ARRAY",
+        "Value": "1, 55"
+      }
+    ]
+  }
+]

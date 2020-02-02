@@ -20,7 +20,7 @@ const bpfProgramTextTemplate = `
 	BPF_PERF_OUTPUT(events);
 
 	inline int print_symbol_arg(struct pt_regs *ctx) {
-
+		
 		void* stackAddr = (void*)ctx->sp;
 		{{range $arg_index, $arg_element := .Arguments}}
 
@@ -109,7 +109,7 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 		return err
 	}
 
-	err = bpfModule.AttachUprobe(traceContext.binaryName, traceContext.functionName, uprobeFd, -1)
+	err = bpfModule.AttachUprobe(traceContext.binaryName, traceContext.FunctionName, uprobeFd, -1)
 	if err != nil {
 		return fmt.Errorf("could not attach uprobe to symbol: %s: %s", "test_function", err.Error())
 	}
@@ -126,15 +126,13 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 	numberOfArgs := len(traceContext.Arguments)
 	var index int
 	var dataTypeOfValue goType
-	output := output{FunctionName: traceContext.functionName}
+	output := output{FunctionName: traceContext.FunctionName}
 	var argOutput = make([]outputArg, numberOfArgs)
-
 	go func() {
 
 		var valueString string
 		var outputValue outputArg
 		for {
-
 			value := <-channel
 
 			// Determine what type it is for interpretation based on order of value coming in

@@ -11,7 +11,7 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 .RECIPEPREFIX = >
 
-default: bin/oster bin/test-prog bin/print-stack
+default: bin/oster bin/print-stack bin/tester
 
 bin/oster: cmd/oster
 > mkdir -p ./bin
@@ -23,10 +23,13 @@ bin/print-stack: cmd/print-stack
 > $(GOENV) go build -o ./bin/print-stack ./cmd/print-stack/...
 .PHONY: bin/print-stack
 
-bin/test-prog: cmd/test-prog
+bin/tester: cmd/tester
 > mkdir -p ./bin
-> $(GOENV) go build -o ./bin/test-prog ./cmd/test-prog/main.go
-.PHONY: bin/test-prog
+> $(GOENV) go build -o ./bin/tester ./cmd/tester/main.go
+.PHONY: bin/tester
+
+test: tests/run_smoke_test.sh
+> sh -c "tests/run_smoke_test.sh"
 
 clean:
 > rm ./bin/*
@@ -36,6 +39,6 @@ clean:
 help:
 > @echo  "Targets:"
 > @echo  "    oster (default) - build oster cli to ./bin/oster"
-> @echo  "    test-prog - build dummy programs to run oster on"
+> @echo  "    tester - build dummy programs to run oster on"
 > @echo  "    print-stack - build print-stack cli which traces a particular function by printing the first 25 bytes the stack on function enter"
 > @echo  "    clean - clear out bin"

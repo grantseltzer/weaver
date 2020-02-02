@@ -9,7 +9,7 @@ import (
 
 type functionTraceContext struct {
 	binaryName   string
-	functionName string
+	FunctionName string
 	Arguments    []argument
 }
 
@@ -201,7 +201,7 @@ func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs st
 		}
 
 		if funcAndArgs[i] == '(' {
-			context.functionName = parseStack.string()
+			context.FunctionName = parseStack.string()
 			invalidChars += string('(')
 			parseStack.clear()
 			continue
