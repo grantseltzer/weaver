@@ -28,6 +28,9 @@ bin/tester: cmd/tester
 > $(GOENV) go build -o ./bin/tester ./cmd/tester/main.go
 .PHONY: bin/tester
 
+test: tests/run_smoke_test.sh
+> sh -c "tests/run_smoke_test.sh"
+
 clean:
 > rm ./bin/*
 .PHONY: clean
