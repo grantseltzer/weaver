@@ -145,6 +145,9 @@ func test_uint32_array(x [2]uint32) {}
 func test_uint64_array(x [2]uint64) {}
 
 func main() {
+
+	//TODO: Read the values to pass into these functions from a file
+
 	test_single_byte('a')
 	test_single_rune('a')
 	test_single_string("a")
