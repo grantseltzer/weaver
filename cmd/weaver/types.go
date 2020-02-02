@@ -161,7 +161,7 @@ var goTypeToString = map[goType]string{
 }
 
 func listAvailableTypes() {
-	for k, _ := range stringToGoType {
+	for k := range stringToGoType {
 		fmt.Println(k)
 	}
 }
