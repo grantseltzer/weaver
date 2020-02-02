@@ -1,4 +1,4 @@
-module github.com/grantseltzer/oster
+module github.com/grantseltzer/weaver
 
 go 1.13
 

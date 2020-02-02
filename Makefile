@@ -1,4 +1,5 @@
 GOENV = GOOS=linux GOARCH=amd64
+MOD= -mod=vendor
 SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
@@ -11,21 +12,21 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 .RECIPEPREFIX = >
 
-default: bin/oster bin/print-stack bin/tester
+default: bin/weaver bin/print-stack bin/tester
 
-bin/oster: cmd/oster
+bin/weaver: cmd/weaver
 > mkdir -p ./bin
-> $(GOENV) go build -o ./bin/oster ./cmd/oster/...
-.PHONY: bin/oster
+> $(GOENV) go build $(MOD) -o ./bin/weaver ./cmd/weaver/...
+.PHONY: bin/weaver
 
 bin/print-stack: cmd/print-stack
 > mkdir -p ./bin
-> $(GOENV) go build -o ./bin/print-stack ./cmd/print-stack/...
+> $(GOENV) go build $(MOD) -o ./bin/print-stack ./cmd/print-stack/...
 .PHONY: bin/print-stack
 
 bin/tester: cmd/tester
 > mkdir -p ./bin
-> $(GOENV) go build -o ./bin/tester ./cmd/tester/main.go
+> $(GOENV) go build $(MOD) -o ./bin/tester ./cmd/tester/main.go
 .PHONY: bin/tester
 
 test: tests/run_smoke_test.sh
@@ -38,7 +39,7 @@ clean:
 .PHONY: clean
 help:
 > @echo  "Targets:"
-> @echo  "    oster (default) - build oster cli to ./bin/oster"
-> @echo  "    tester - build dummy programs to run oster on"
+> @echo  "    weaver (default) - build weaver cli to ./bin/weaver"
+> @echo  "    tester - build dummy programs to run weaver on"
 > @echo  "    print-stack - build print-stack cli which traces a particular function by printing the first 25 bytes the stack on function enter"
 > @echo  "    clean - clear out bin"

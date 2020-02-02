@@ -1,11 +1,11 @@
-# Oster
+# Weaver
 
 <p align="center">
     <img src="DrManhattanGopher.png" alt="gopher" width="200"/>
 </p>
 
 
-Oster is a CLI tool that allows you to trace Go programs in order to inspect what values are passed to specified functions. It leverages eBPF attached to uprobes.
+Weaver is a CLI tool that allows you to trace Go programs in order to inspect what values are passed to specified functions. It leverages eBPF attached to uprobes.
 
 
 ## Quick Start 
@@ -37,16 +37,16 @@ main.test_function(int, [2]int)
 main.other_test_function(rune, int64)
 ```
 
-Notice that we have to specify the parameter data types. <i>(You can use `oster --types` to see what data types are supported.)</i>
+Notice that we have to specify the parameter data types. <i>(You can use `weaver --types` to see what data types are supported.)</i>
 
-Now we can call `oster` like so:
+Now we can call `weaver` like so:
 
 ```
-sudo ./bin/oster -f ./cmd/test-prog/test_functions_file.txt ./bin/test-prog | jq
+sudo ./bin/weaver -f ./cmd/test-prog/test_functions_file.txt ./bin/test-prog | jq
 ```
 
 
-Oster will then sit idle without any output until `test-prog` is run and the `test_function` function is called. This will also work on a running Go Program.
+Weaver will then sit idle without any output until `test-prog` is run and the `test_function` function is called. This will also work on a running Go Program.
 
 ```json
 {
@@ -80,7 +80,7 @@ Oster will then sit idle without any output until `test-prog` is run and the `te
 
 ## Note on supported types
 
-Currently oster supports basic data types but getting support for user defined types is a high priority. Getting following types defined are also a work in progress:
+Currently weaver supports basic data types but getting support for user defined types is a high priority. Getting following types defined are also a work in progress:
 
 - arbitrary pointers
 - slices
@@ -95,7 +95,7 @@ Currently oster supports basic data types but getting support for user defined t
 
 ## Build
 
-`make oster` will compile the oster binary to `bin/oster`
+`make weaver` will compile the weaver binary to `bin/weaver`
 
 <i>Can't build? Please make an issue!</i>
 

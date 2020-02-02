@@ -18,13 +18,13 @@ var (
 func main() {
 
 	app := &cli.App{
-		Name:  "oster",
+		Name:  "weaver",
 		Usage: "Trace specific executions in Go programs",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "functions-file",
 				Value:    "",
-				Usage:    "specify a file which contains line sperated specifications of functions to trace. Each line is of the form: 'func-name(arg1_type, arg2_type, ...)'. Use `oster --types` for a list of accepted types.",
+				Usage:    "specify a file which contains line sperated specifications of functions to trace. Each line is of the form: 'func-name(arg1_type, arg2_type, ...)'. Use `weaver --types` for a list of accepted types.",
 				Required: false,
 				Aliases:  []string{"f"},
 			},
@@ -45,7 +45,7 @@ func main() {
 		},
 		Action: func(c *cli.Context) error {
 			if c.NumFlags() == 0 {
-				fmt.Println("Use oster --help")
+				fmt.Println("Use weaver --help")
 				os.Exit(0)
 			}
 			return entry(c)
