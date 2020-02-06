@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/olekukonko/tablewriter"
 )
@@ -17,6 +18,8 @@ type outputArg struct {
 	Type  string
 	Value string
 }
+
+var mutex = &sync.Mutex{}
 
 func printOutput(o output) error {
 
@@ -36,7 +39,11 @@ func printOutput(o output) error {
 		line := []string{o.FunctionName, fmt.Sprintf("%d", i), arg.Type, arg.Value}
 		table.Append(line)
 	}
+
+	// tablewriter doesn't support asynchronous renders
+	mutex.Lock()
 	table.Render()
+	mutex.Unlock()
 
 	return nil
 }
