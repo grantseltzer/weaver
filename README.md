@@ -7,6 +7,8 @@
 
 Weaver is a CLI tool that allows you to trace Go programs in order to inspect what values are passed to specified functions. It leverages eBPF attached to uprobes.
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/grantseltzer/weaver)](https://goreportcard.com/report/github.com/grantseltzer/weaver)
+
 
 ## Quick Start 
 
