@@ -3,6 +3,10 @@ github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/iovisor/gobpf v0.0.0-20191212083149-cf081d8fe357
 github.com/iovisor/gobpf/bcc
 github.com/iovisor/gobpf/pkg/cpuonline
+# github.com/mattn/go-runewidth v0.0.7
+github.com/mattn/go-runewidth
+# github.com/olekukonko/tablewriter v0.0.4
+github.com/olekukonko/tablewriter
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
