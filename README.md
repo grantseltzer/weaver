@@ -44,40 +44,25 @@ Notice that we have to specify the parameter data types. <i>(You can use `weaver
 Now we can call `weaver` like so:
 
 ```
-sudo ./bin/weaver -f ./cmd/test-prog/test_functions_file.txt ./bin/test-prog | jq
+sudo ./bin/weaver -f ./cmd/test-prog/test_functions_file.txt ./bin/test-prog
 ```
 
 
 Weaver will then sit idle without any output until `test-prog` is run and the `test_function` function is called. This will also work on a running Go Program.
 
-```json
-{
-  "FunctionName": "main.other_test_function",
-  "Args": [
-    {
-      "Type": "RUNE",
-      "Value": "a"
-    },
-    {
-      "Type": "INT64",
-      "Value": "33"
-    }
-  ]
-}
-{
-  "FunctionName": "main.test_function",
-  "Args": [
-    {
-      "Type": "INT",
-      "Value": "3"
-    },
-    {
-      "Type": "INT_ARRAY",
-      "Value": "1, 2"
-    }
-  ]
-}
-
+```
++--------------------+--------------+-----------+-------+
+|   FUNCTION NAME    | ARG POSITION |   TYPE    | VALUE |
++--------------------+--------------+-----------+-------+
+| main.test_function | 0            | INT       | 3     |
+| main.test_function | 1            | INT_ARRAY | 1, 2  |
++--------------------+--------------+-----------+-------+
++--------------------------+--------------+-------+-------+
+|      FUNCTION NAME       | ARG POSITION | TYPE  | VALUE |
++--------------------------+--------------+-------+-------+
+| main.other_test_function | 0            | RUNE  | a     |
+| main.other_test_function | 1            | INT64 | 33    |
++--------------------------+--------------+-------+-------+
 ```
 
 ## Note on supported types
