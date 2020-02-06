@@ -44,11 +44,10 @@ Notice that we have to specify the parameter data types. <i>(You can use `weaver
 Now we can call `weaver` like so:
 
 ```
-sudo ./bin/weaver -f ./cmd/test-prog/test_functions_file.txt ./bin/test-prog
+sudo weaver -f /path/to/functions_to_trace.txt /path/to/test-prog-binary
 ```
 
-
-Weaver will then sit idle without any output until `test-prog` is run and the `test_function` function is called. This will also work on a running Go Program.
+Weaver will then sit idle without any output until `test-prog` is run and the `test_function` and `other_test_function` functions are called. This will also work on an already running Go Program.
 
 ```
 +--------------------+--------------+-----------+-------+
