@@ -13,6 +13,7 @@ import (
 
 var (
 	globalDebug bool
+	globalJSON  bool
 )
 
 func main() {
@@ -42,6 +43,13 @@ func main() {
 				Required: false,
 				Aliases:  []string{"d"},
 			},
+			&cli.BoolFlag{
+				Name:     "json",
+				Value:    false,
+				Usage:    "toggle for output to be in JSON format",
+				Required: false,
+				Aliases:  []string{"JSON", "j"},
+			},
 		},
 		Action: func(c *cli.Context) error {
 			if c.NumFlags() == 0 {
@@ -68,6 +76,11 @@ func entry(c *cli.Context) error {
 	// Turn on debug logigng
 	if c.Bool("debug") {
 		globalDebug = true
+	}
+
+	// Turn on debug logigng
+	if c.Bool("json") {
+		globalJSON = true
 	}
 
 	// Just list acceptable golang types
