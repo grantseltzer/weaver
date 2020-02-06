@@ -34,7 +34,7 @@ func printOutput(o output) error {
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Function Name", "Arg Position", "Type", "Value"})
-
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	for i, arg := range o.Args {
 		line := []string{o.FunctionName, fmt.Sprintf("%d", i), arg.Type, arg.Value}
 		table.Append(line)
