@@ -33,13 +33,15 @@ test: tests/run_smoke_test.sh
 > sh -c "tests/run_smoke_test.sh"
 
 clean:
-> rm ./bin/*
+> rm -f ./bin/*
 .PHONY: clean
 
 .PHONY: clean
 help:
 > @echo  "Targets:"
-> @echo  "    weaver (default) - build weaver cli to ./bin/weaver"
-> @echo  "    tester - build dummy programs to run weaver on"
-> @echo  "    print-stack - build print-stack cli which traces a particular function by printing the first 25 bytes the stack on function enter"
+> @echo  "    default - bin/*"
+> @echo  "    test - (REQUIRES ROOT) run smoke tests"
+> @echo  "    bin/weaver - build weaver cli to ./bin/weaver"
+> @echo  "    bin/tester - build tester program used in test target to ./bin/tester"
+> @echo  "    bin/print-stack - build print-stack cli which traces a particular function by printing the first 25 bytes the stack on function enter to ./bin/print-stack"
 > @echo  "    clean - clear out bin"

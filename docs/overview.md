@@ -10,8 +10,14 @@ Input:
 
 Behavior:
 
-- Weaver reads the specified functions file. Each line is parsed into an internal data structure which represents the arguments.
+- Weaver reads the specified functions file. Each line is parsed into an internal data structure (trace context) which represents the arguments.
 
-- The stack offsets are then calculated based on [this logic](/docs/stack-offsets.md) and recorded in the same internal data structure.
+- The stack offsets are then calculated based on [this logic](/docs/stack-offsets.md) and recorded in the same trace context structure.
 
--
+- The trace context for each function is compiled into eBPF programs using a text template.
+
+- Each eBPF program is loaded into the kernel attached to their corresponding uprobes.
+
+- Weaver listens on a single perf buffer for argument values from the eBPF programs once their triggered by running the corresponding program.
+
+- Arguments are outputted in the configured manner.

@@ -1,4 +1,0 @@
-## Security
-
-- requiring root
-- 
