@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"strconv"
@@ -21,6 +23,27 @@ type argument struct {
 	PrintfFormat   string
 	TypeSize       int
 	ArrayLength    int // Set as 0 if not array
+}
+
+type procInfo struct {
+	Pid  uint32 `json:"pid,omitempty"`
+	Ppid uint32 `json:"ppid,omitempty"`
+	Comm string `json:"comm,omitempty"`
+}
+
+// UnmarshalBinary for procInfo
+func (i *procInfo) UnmarshalBinary(data []byte) error {
+
+	// proc info struct is 24 bytes long
+	if len(data) < 24 {
+		return fmt.Errorf("error decoding process info")
+	}
+	data = bytes.Trim(data, "\x00")
+	i.Pid = binary.LittleEndian.Uint32(data[0:4])
+	i.Ppid = binary.LittleEndian.Uint32(data[4:8])
+	i.Comm = string(data[8:])
+
+	return nil
 }
 
 type goType int

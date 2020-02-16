@@ -16,11 +16,29 @@ import (
 const bpfProgramTextTemplate = `
 	#include <uapi/linux/ptrace.h>
 	#include <linux/string.h>
+	#include <linux/fs.h>
+	#include <linux/sched.h>
 
 	BPF_PERF_OUTPUT(events);
 
+	struct proc_info_t {
+    	u32 pid;  // PID as in the userspace term (i.e. task->tgid in kernel)
+    	u32 ppid; // Parent PID as in the userspace term (i.e task->real_parent->tgid in kernel)
+    	char comm[TASK_COMM_LEN]; // 16 bytes
+	};
+
 	inline int print_symbol_arg(struct pt_regs *ctx) {
 		
+		// get process info
+    	struct task_struct *task;
+		struct proc_info_t procInfo = {};
+    	task = (struct task_struct *)bpf_get_current_task();
+		procInfo.pid = bpf_get_current_pid_tgid() >> 32;
+		procInfo.ppid = task->real_parent->tgid;
+		bpf_get_current_comm(&procInfo.comm, sizeof(procInfo.comm));
+
+		events.perf_submit(ctx, &procInfo, sizeof(procInfo));
+
 		void* stackAddr = (void*)ctx->sp;
 		{{range $arg_index, $arg_element := .Arguments}}
 
@@ -129,6 +147,13 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 	output := output{FunctionName: traceContext.FunctionName}
 	var argOutput = make([]outputArg, numberOfArgs)
 	go func() {
+		// First sent values are process info
+		value := <-channel
+		output.ProcInfo = procInfo{}
+		err := output.ProcInfo.UnmarshalBinary(value)
+		if err != nil {
+			fmt.Println("failed to unmarshall process info")
+		}
 
 		var valueString string
 		var outputValue outputArg

@@ -3,7 +3,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root" 
+   echo "This script must be run as root"
    exit 1
 fi
 
@@ -19,7 +19,7 @@ test -f $TEST_FUNCTIONS_FILE
 
 echo "[*] Running Weaver with $TEST_FUNCTIONS_FILE"
 
-./bin/weaver -f $TEST_FUNCTIONS_FILE ./bin/tester > $OUTPUT_FILE&
+./bin/weaver --json -f $TEST_FUNCTIONS_FILE ./bin/tester > $OUTPUT_FILE&
 
 OSTER_PID=$!
 
