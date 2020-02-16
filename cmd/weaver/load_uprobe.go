@@ -22,17 +22,17 @@ const bpfProgramTextTemplate = `
 	BPF_PERF_OUTPUT(events);
 
 	struct proc_info_t {
-    	u32 pid;  // PID as in the userspace term (i.e. task->tgid in kernel)
-    	u32 ppid; // Parent PID as in the userspace term (i.e task->real_parent->tgid in kernel)
-    	char comm[TASK_COMM_LEN]; // 16 bytes
+		u32 pid;  // PID as in the userspace term (i.e. task->tgid in kernel)
+		u32 ppid; // Parent PID as in the userspace term (i.e task->real_parent->tgid in kernel)
+		char comm[TASK_COMM_LEN]; // 16 bytes
 	};
 
 	inline int print_symbol_arg(struct pt_regs *ctx) {
 		
 		// get process info
-    	struct task_struct *task;
+		struct task_struct *task;
 		struct proc_info_t procInfo = {};
-    	task = (struct task_struct *)bpf_get_current_task();
+		task = (struct task_struct *)bpf_get_current_task();
 		procInfo.pid = bpf_get_current_pid_tgid() >> 32;
 		procInfo.ppid = task->real_parent->tgid;
 		bpf_get_current_comm(&procInfo.comm, sizeof(procInfo.comm));
