@@ -19,7 +19,7 @@ test -f $TEST_FUNCTIONS_FILE
 
 echo "[*] Running Weaver with $TEST_FUNCTIONS_FILE"
 
-./bin/weaver -j -f $TEST_FUNCTIONS_FILE ./bin/tester > $OUTPUT_FILE&
+./bin/weaver --json -f $TEST_FUNCTIONS_FILE ./bin/tester > $OUTPUT_FILE&
 
 OSTER_PID=$!
 
