@@ -150,7 +150,7 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 		// First sent values are process info
 		value := <-channel
 		output.ProcInfo = procInfo{}
-		err := output.ProcInfo.UnmarshalBinary(value)
+		err := output.ProcInfo.unmarshalBinary(value)
 		if err != nil {
 			fmt.Println("failed to unmarshall process info")
 		}

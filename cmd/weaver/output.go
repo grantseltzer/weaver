@@ -10,14 +10,14 @@ import (
 )
 
 type output struct {
-	FunctionName string
-	Args         []outputArg
-	ProcInfo     procInfo `json:"procInfo,omitempty"`
+	FunctionName string      `json:"functionName"`
+	Args         []outputArg `json:"args"`
+	ProcInfo     procInfo    `json:"procInfo"`
 }
 
 type outputArg struct {
-	Type  string
-	Value string
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
 var mutex = &sync.Mutex{}

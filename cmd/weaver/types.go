@@ -31,14 +31,14 @@ type procInfo struct {
 	Comm string `json:"comm,omitempty"`
 }
 
-// UnmarshalBinary for procInfo
-func (i *procInfo) UnmarshalBinary(data []byte) error {
+// unmarshalBinary for procInfo
+func (i *procInfo) unmarshalBinary(data []byte) error {
 
+	data = bytes.Trim(data, "\x00")
 	// proc info struct is 24 bytes long
-	if len(data) < 24 {
+	if len(data) == 24 {
 		return fmt.Errorf("error decoding process info")
 	}
-	data = bytes.Trim(data, "\x00")
 	i.Pid = binary.LittleEndian.Uint32(data[0:4])
 	i.Ppid = binary.LittleEndian.Uint32(data[4:8])
 	i.Comm = string(data[8:])
