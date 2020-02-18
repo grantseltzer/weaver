@@ -39,7 +39,6 @@ func (i *procInfo) unmarshalBinary(data []byte) error {
 	if len(data) > 24 || len(data) < 8 {
 		return fmt.Errorf("error decoding process info")
 	}
-	fmt.Println(len(data))
 	i.Pid = binary.LittleEndian.Uint32(data[0:4])
 	i.Ppid = binary.LittleEndian.Uint32(data[4:8])
 	i.Comm = string(data[8:])
