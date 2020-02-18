@@ -147,18 +147,20 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 	output := output{FunctionName: traceContext.FunctionName}
 	var argOutput = make([]outputArg, numberOfArgs)
 	go func() {
-		// First sent values are process info
-		value := <-channel
-		output.ProcInfo = procInfo{}
-		err := output.ProcInfo.unmarshalBinary(value)
-		if err != nil {
-			fmt.Println("failed to unmarshall process info")
-		}
 
 		var valueString string
 		var outputValue outputArg
 		for {
+			// First sent values are process info
 			value := <-channel
+			output.ProcInfo = procInfo{}
+			err := output.ProcInfo.unmarshalBinary(value)
+			if err != nil {
+				// assume it is not proc info struct
+				fmt.Println("failed to unmarshall process info")
+			} else {
+				value = <-channel
+			}
 
 			// Determine what type it is for interpretation based on order of value coming in
 			dataTypeOfValue = traceContext.Arguments[index].goType
