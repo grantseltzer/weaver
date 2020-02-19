@@ -153,9 +153,10 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 		for {
 			// First sent values are process info
 			value := <-channel
-			output.ProcInfo = procInfo{}
-			err := output.ProcInfo.unmarshalBinary(value)
+			procInfo := procInfo{}
+			err := procInfo.unmarshalBinary(value)
 			if err == nil {
+				output.ProcInfo = procInfo
 				// if err == nil value was proc info struct, else do
 				// not fetch next value
 				value = <-channel
