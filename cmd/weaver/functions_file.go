@@ -22,9 +22,8 @@ func read_functions_file(path string) ([]functionTraceContext, error) {
 			continue
 		}
 
-		if globalDebug {
-			fmt.Println("parsing: " + funcString)
-		}
+		debugLog("parsing: %s\n", funcString)
+
 		err := parseFunctionAndArgumentTypes(&contexts[i], funcString)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse function string '%s': %s", funcString, err.Error())
