@@ -10,13 +10,14 @@ import (
 )
 
 type output struct {
-	FunctionName string
-	Args         []outputArg
+	FunctionName string      `json:"functionName"`
+	Args         []outputArg `json:"args"`
+	ProcInfo     procInfo    `json:"procInfo"`
 }
 
 type outputArg struct {
-	Type  string
-	Value string
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
 var mutex = &sync.Mutex{}
@@ -33,10 +34,11 @@ func printOutput(o output) error {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Function Name", "Arg Position", "Type", "Value"})
+	table.SetHeader([]string{"Function Name", "Arg Position", "Type", "Value", "Proc Name", "PID", "PPID"})
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	for i, arg := range o.Args {
-		line := []string{o.FunctionName, fmt.Sprintf("%d", i), arg.Type, arg.Value}
+		line := []string{o.FunctionName, fmt.Sprintf("%d", i), arg.Type, arg.Value, o.ProcInfo.Comm,
+			fmt.Sprintf("%d", o.ProcInfo.Pid), fmt.Sprintf("%d", o.ProcInfo.Ppid)}
 		table.Append(line)
 	}
 
