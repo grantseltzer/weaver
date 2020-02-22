@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 
 	"github.com/urfave/cli/v2"
 )
@@ -109,14 +110,21 @@ func entry(c *cli.Context) error {
 	runtimeContext, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// wg is used to communicate back with the main thread when
+	// all uprobe/eBPFs are installed
+	var wg sync.WaitGroup
+	wg.Add(len(contexts))
+
 	// Install eBPF program for each function to trace
 	for i := range contexts {
-
 		contexts[i].binaryName = binaryFullPath
-
-		// Load uprobe and BPF code. This will block until Ctrl-C or an error occurs.
-		go loadUprobeAndBPFModule(&contexts[i], runtimeContext)
+		go loadUprobeAndBPFModule(&contexts[i], runtimeContext, &wg)
 	}
+
+	go func() {
+		wg.Wait()
+		debugLog("All probes installed\n")
+	}()
 
 	<-sig
 

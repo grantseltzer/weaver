@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"strings"
+	"sync"
 	"text/template"
 
 	bpf "github.com/iovisor/gobpf/bcc"
@@ -104,10 +105,8 @@ func bpfText(context *functionTraceContext) string {
 	buf := new(bytes.Buffer)
 	t.Execute(buf, context)
 
-	if globalDebug {
-		// Print eBPF text
-		fmt.Println(buf.String())
-	}
+	// Print eBPF text
+	debugLog("%s\n", buf.String())
 
 	return buf.String()
 }
@@ -115,7 +114,9 @@ func bpfText(context *functionTraceContext) string {
 // loadUprobeAndBPFModule will, based on the passed context, install the bpf program and attach a uprobe to the specified function
 // It then prints results to the designated output stream.
 // This blocks until Ctrl-C or error occurs.
-func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext context.Context) error {
+func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext context.Context, wg *sync.WaitGroup) error {
+
+	defer runtimeContext.Err()
 
 	// Load eBPF filter and uprobe
 	filterText := bpfText(traceContext)
@@ -203,6 +204,7 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 		}
 	}()
 
+	wg.Done()
 	perfMap.Start()
 	<-runtimeContext.Done()
 	perfMap.Stop()

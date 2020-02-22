@@ -49,3 +49,9 @@ func printOutput(o output) error {
 
 	return nil
 }
+
+func debugLog(format string, a ...interface{}) {
+	if globalDebug {
+		fmt.Fprintf(os.Stderr, "\x1b[96m"+format+"\x1b[0m", a...)
+	}
+}
