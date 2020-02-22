@@ -192,4 +192,8 @@ func main() {
 	test_uint16_array([2]uint16{951, 123})
 	test_uint32_array([2]uint32{5135, 512321})
 	test_uint64_array([2]uint64{412412456, 1234134})
+
+	// Structure testing
+	test := testStruct{}
+	test.testSingleByte('a')
 }

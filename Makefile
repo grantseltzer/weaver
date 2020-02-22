@@ -26,7 +26,7 @@ bin/print-stack: cmd/print-stack
 
 bin/tester: cmd/tester
 > mkdir -p ./bin
-> $(GOENV) go build $(MOD) -o ./bin/tester ./cmd/tester/main.go
+> $(GOENV) go build $(MOD) -o ./bin/tester ./cmd/tester/...
 .PHONY: bin/tester
 
 test: tests/run_smoke_test.sh
