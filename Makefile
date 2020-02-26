@@ -12,12 +12,17 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 .RECIPEPREFIX = >
 
-default: bin/weaver bin/print-stack bin/tester
+default: bin/weaver bin/dwarfinfo bin/print-stack bin/tester
 
 bin/weaver: cmd/weaver
 > mkdir -p ./bin
 > $(GOENV) go build $(MOD) -o ./bin/weaver ./cmd/weaver/...
 .PHONY: bin/weaver
+
+bin/dwarfinfo: cmd/dwarfinfo
+> mkdir -p ./bin
+> $(GOENV) go build $(MOD) -o ./bin/dwarfinfo ./cmd/dwarfinfo/...
+.PHONY: bin/dwarfinfo
 
 bin/print-stack: cmd/print-stack
 > mkdir -p ./bin
