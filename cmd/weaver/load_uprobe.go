@@ -14,7 +14,7 @@ import (
 	bpf "github.com/iovisor/gobpf/bcc"
 )
 
-const bpfProgramTextTemplate = `
+const bpfWithArgsProgramTextTemplate = `
 	#include <uapi/linux/ptrace.h>
 	#include <linux/string.h>
 	#include <linux/fs.h>
@@ -40,56 +40,77 @@ const bpfProgramTextTemplate = `
 
 		events.perf_submit(ctx, &procInfo, sizeof(procInfo));
 
-		void* stackAddr = (void*)ctx->sp;
-		{{range $arg_index, $arg_element := .Arguments}}
 
-		{{if gt $arg_element.ArrayLength 0}}
+		{{if eq .HasArguments true}}
 
-		unsigned int i_{{$arg_element.VariableName}};
-		void* loopAddr_{{$arg_element.VariableName}} = stackAddr+{{$arg_element.StartingOffset}};
-		for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < {{$arg_element.ArrayLength}}; i_{{$arg_element.VariableName}}++) {
-			{{if ne $arg_element.CType "char *" }} 
-			{{$arg_element.CType}} {{$arg_element.VariableName}};
-			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), loopAddr_{{$arg_element.VariableName}}); 
-			events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
-			loopAddr_{{$arg_element.VariableName}} += {{$arg_element.TypeSize}};
-			{{else}}
-			unsigned long {{$arg_element.VariableName}}_length;
-			bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), loopAddr_{{$arg_element.VariableName}}+8);
-			if ({{$arg_element.VariableName}}_length > 16 ) {
-				{{$arg_element.VariableName}}_length = 16;
-			}
-			unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
+			void* stackAddr = (void*)ctx->sp;
+
+			// [TEMPLATE] Traverse over each argument in this trace context
+			{{range $arg_index, $arg_element := .Arguments}}
+
+				// [TEMPLATE] If this argument is an array
+				{{if gt $arg_element.ArrayLength 0}}
+
+					unsigned int i_{{$arg_element.VariableName}};
+					void* loopAddr_{{$arg_element.VariableName}} = stackAddr+{{$arg_element.StartingOffset}};
+					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < {{$arg_element.ArrayLength}}; i_{{$arg_element.VariableName}}++) {
+						
+						// [TEMPLATE] This is an array of strings
+						{{if ne $arg_element.CType "char *" }}
+
+							{{$arg_element.CType}} {{$arg_element.VariableName}};
+							bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), loopAddr_{{$arg_element.VariableName}}); 
+							events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
+							loopAddr_{{$arg_element.VariableName}} += {{$arg_element.TypeSize}};
+						
+						// [TEMPLATE] This is an array of anything else
+						{{else}}
+
+							unsigned long {{$arg_element.VariableName}}_length;
+							bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), loopAddr_{{$arg_element.VariableName}}+8);
+							if ({{$arg_element.VariableName}}_length > 16 ) {
+								{{$arg_element.VariableName}}_length = 16;
+							}
+							unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
+							
+							// use long double to have up to a 16 character string by reading in the raw bytes
+							long double* {{$arg_element.VariableName}}_ptr;
+							long double  {{$arg_element.VariableName}};
+							bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), loopAddr_{{$arg_element.VariableName}});
+							bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
+						
+							events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
+							loopAddr_{{$arg_element.VariableName}} += 16;
+						{{end}}
+					}
+
+				// [TEMPLATE] If it's not array, but it's a string
+				{{else if eq $arg_element.CType "char *" }}
+				
+					unsigned long {{$arg_element.VariableName}}_length;
+					bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+{{$arg_element.StartingOffset}}+8);
+					if ({{$arg_element.VariableName}}_length > 16 ) {
+						{{$arg_element.VariableName}}_length = 16;
+					}
+					unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
+					
+					// use long double to have up to a 16 character string by reading in the raw bytes
+					long double* {{$arg_element.VariableName}}_ptr;
+					long double  {{$arg_element.VariableName}};
+					bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), stackAddr+{{$arg_element.StartingOffset}});
+					bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
+					events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
+
+				// [TEMPLATE] Any other type besides an array or string
+				{{- else }}
+
+					{{$arg_element.CType}} {{$arg_element.VariableName}};
+					bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), stackAddr+{{$arg_element.StartingOffset}}); 
+					events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
+				
+				{{- end}}
 			
-			// use long double to have up to a 16 character string by reading in the raw bytes
-			long double* {{$arg_element.VariableName}}_ptr;
-			long double  {{$arg_element.VariableName}};
-			bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), loopAddr_{{$arg_element.VariableName}});
-			bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
-		
-			events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
-			loopAddr_{{$arg_element.VariableName}} += 16;
 			{{end}}
-		}
-		{{else if eq $arg_element.CType "char *" }}
-		unsigned long {{$arg_element.VariableName}}_length;
-		bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+{{$arg_element.StartingOffset}}+8);
-		if ({{$arg_element.VariableName}}_length > 16 ) {
-			{{$arg_element.VariableName}}_length = 16;
-		}
-		unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
-		
-		// use long double to have up to a 16 character string by reading in the raw bytes
-		long double* {{$arg_element.VariableName}}_ptr;
-		long double  {{$arg_element.VariableName}};
-		bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), stackAddr+{{$arg_element.StartingOffset}});
-		bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
-		events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
-		{{- else }}
-		{{$arg_element.CType}} {{$arg_element.VariableName}};
-		bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), stackAddr+{{$arg_element.StartingOffset}}); 
-		events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
-		{{- end}}
 		{{end}}
 		return 0;
 	}
@@ -97,7 +118,7 @@ const bpfProgramTextTemplate = `
 
 func bpfText(context *functionTraceContext) string {
 	t := template.New("bpf_text")
-	t, err := t.Parse(bpfProgramTextTemplate)
+	t, err := t.Parse(bpfWithArgsProgramTextTemplate)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -106,7 +127,7 @@ func bpfText(context *functionTraceContext) string {
 	t.Execute(buf, context)
 
 	// Print eBPF text
-	debugLog("%s\n", buf.String())
+	debugeBPFLog("%s\n", buf.String())
 
 	return buf.String()
 }
@@ -128,6 +149,7 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 		return err
 	}
 
+	debugLog("Attaching uprobe to %s\n", traceContext.FunctionName)
 	err = bpfModule.AttachUprobe(traceContext.binaryName, traceContext.FunctionName, uprobeFd, -1)
 	if err != nil {
 		return fmt.Errorf("could not attach uprobe to symbol: %s: %s", "test_function", err.Error())
@@ -160,7 +182,13 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 				output.ProcInfo = procInfo
 				// if err == nil value was proc info struct, else do
 				// not fetch next value
-				value = <-channel
+				value = <-channel //FIXME: This line shouldn't be called if in package mode
+			}
+
+			if globalMode == PACKAGE_MODE {
+				// no argument parsing in package mode
+				printOutput(output)
+				continue
 			}
 
 			// Determine what type it is for interpretation based on order of value coming in

@@ -12,7 +12,8 @@ import (
 type functionTraceContext struct {
 	binaryName   string
 	FunctionName string
-	Arguments    []argument
+	HasArguments bool       // used for parsing text template
+	Arguments    []argument `json:",omitempty"`
 }
 
 type argument struct {
@@ -30,6 +31,13 @@ type procInfo struct {
 	Ppid uint32 `json:"ppid,omitempty"`
 	Comm string `json:"comm,omitempty"`
 }
+
+type modeOfOperation uint8
+
+const (
+	PACKAGE_MODE   modeOfOperation = 1
+	FUNC_FILE_MODE modeOfOperation = 2
+)
 
 // unmarshalBinary for procInfo
 func (i *procInfo) unmarshalBinary(data []byte) error {
