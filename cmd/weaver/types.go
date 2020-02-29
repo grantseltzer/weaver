@@ -234,7 +234,7 @@ func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs st
 
 	parseStack := &stack{}
 
-	var invalidChars = "+&%$#@!<>/?\";:{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
+	var invalidChars = "+&%$#@!<>?\";:{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
 
 	for i := range funcAndArgs {
 

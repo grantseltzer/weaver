@@ -23,6 +23,13 @@ echo "[*] Running Weaver with $TEST_FUNCTIONS_FILE"
 
 OSTER_PID=$!
 
+# Set cleanup function
+function cleanup {
+    echo "[*] Killing weaver process..."
+    kill -9 $OSTER_PID > /dev/null 2>&1
+}
+trap cleanup EXIT
+
 echo "[*] Weaver running with pid $OSTER_PID, writing to $OUTPUT_FILE"
 
 echo "[*] Waiting for uprobes to be installed"
@@ -41,5 +48,3 @@ echo "[*] Checking output"
 diff $REFERENCE_FILE $OUTPUT_FILE
 
 echo "[*] Looks good :)"
-
-kill -9 $OSTER_PID

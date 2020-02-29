@@ -113,10 +113,10 @@ func entry(c *cli.Context) error {
 	// wg is used to communicate back with the main thread when
 	// all uprobe/eBPFs are installed
 	var wg sync.WaitGroup
-	wg.Add(len(contexts))
 
 	// Install eBPF program for each function to trace
 	for i := range contexts {
+		wg.Add(1)
 		contexts[i].binaryName = binaryFullPath
 		go loadUprobeAndBPFModule(&contexts[i], runtimeContext, &wg)
 	}
