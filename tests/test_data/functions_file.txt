@@ -14,6 +14,7 @@ main.test_single_uint32(uint32)
 main.test_single_uint64(uint64)
 main.test_single_float32(float32)
 main.test_single_float64(float64)
+
 main.test_combined_byte(byte,byte,float32)
 main.test_combined_rune(byte,rune,float32)
 main.test_combined_string(byte,string,float32)
