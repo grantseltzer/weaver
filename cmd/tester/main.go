@@ -194,6 +194,7 @@ func main() {
 	test_uint64_array([2]uint64{412412456, 1234134})
 
 	// Structure testing
-	test := testStruct{}
-	test.testSingleByte('a')
+	// TODO: to enable when DWARF information parsing will be done
+	//test := testStruct{}
+	//test.testSingleByte('a')
 }

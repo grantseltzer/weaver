@@ -19,10 +19,6 @@ func determineStackOffsets(context *functionTraceContext) error {
 	}
 
 	currentIndex := 8
-	if context.IsStructure {
-		// count 8 byte struct pointer
-		currentIndex = 16
-	}
 	bytesInCurrentWindow := 0
 
 	for i := range context.Arguments {

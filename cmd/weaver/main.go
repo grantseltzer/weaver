@@ -116,11 +116,6 @@ func entry(c *cli.Context) error {
 
 	// Install eBPF program for each function to trace
 	for i := range contexts {
-		// Parsing functions file can lead to empty functionTraceContext
-		// if so, ignore them
-		if contexts[i].FunctionName == "" {
-			continue
-		}
 		wg.Add(1)
 		contexts[i].binaryName = binaryFullPath
 		go loadUprobeAndBPFModule(&contexts[i], runtimeContext, &wg)

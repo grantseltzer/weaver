@@ -13,7 +13,6 @@ type functionTraceContext struct {
 	binaryName   string
 	FunctionName string
 	Arguments    []argument
-	IsStructure  bool
 }
 
 type argument struct {
@@ -234,42 +233,36 @@ func (s *stack) string() string {
 func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs string) error {
 
 	parseStack := &stack{}
+
 	var invalidChars = "+&%$#@!<>?\";:{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
 
-	// Check if function belongs to a struct
-	if num := strings.Count(funcAndArgs, "("); num == 2 {
-		context.IsStructure = true
-	}
+	for i := range funcAndArgs {
 
-	tmpBuff := funcAndArgs[strings.LastIndex(funcAndArgs, "("):len(funcAndArgs)]
-	context.FunctionName = funcAndArgs[:strings.LastIndex(funcAndArgs, "(")]
-
-	for i := range tmpBuff {
-
-		if strings.ContainsAny(string(tmpBuff[i]), invalidChars) {
+		if strings.ContainsAny(string(funcAndArgs[i]), invalidChars) {
 			return fmt.Errorf("encountered invalid char: %s", string(funcAndArgs[i]))
 		}
 
-		if tmpBuff[i] == '(' {
+		if funcAndArgs[i] == '(' {
+			context.FunctionName = parseStack.string()
 			invalidChars += string('(')
 			parseStack.clear()
 			continue
 		}
 
-		if tmpBuff[i] == ',' || tmpBuff[i] == ')' {
+		if funcAndArgs[i] == ',' || funcAndArgs[i] == ')' {
 			var arg argument
 			arg.VariableName = fmt.Sprintf("argument%d", i)
 			populateArgumentValues(parseStack, &arg)
 			context.Arguments = append(context.Arguments, arg)
 
-			if tmpBuff[i] == ',' {
+			if funcAndArgs[i] == ',' {
 				parseStack.clear()
 				continue
 			}
 			return nil
 		}
 
-		parseStack.push(tmpBuff[i])
+		parseStack.push(funcAndArgs[i])
 	}
 
 	return nil
