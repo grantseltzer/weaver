@@ -139,98 +139,35 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 
 	defer runtimeContext.Err()
 
-	// Load eBPF filter and uprobe
+	// Generate eBPF code via text template and load it into a new module
 	filterText := bpfText(traceContext)
 	bpfModule := bpf.NewModule(filterText, []string{})
 	defer bpfModule.Close()
 
-	uprobeFd, err := bpfModule.LoadUprobe("print_symbol_arg")
+	// Attach the loaded eBPF code to a uprobe'd function specified by the traceContext.FunctionName
+	debugLog("Attaching uprobe to %s\n", traceContext.FunctionName)
+	uprobeFd, err := bpfModule.LoadUprobe("print_symbol_arg") // name of eBPF function
 	if err != nil {
 		return err
 	}
-
-	debugLog("Attaching uprobe to %s\n", traceContext.FunctionName)
 	err = bpfModule.AttachUprobe(traceContext.binaryName, traceContext.FunctionName, uprobeFd, -1)
 	if err != nil {
 		return fmt.Errorf("could not attach uprobe to symbol: %s: %s", "test_function", err.Error())
 	}
 
-	// Set up bpf perf map to use for output
+	// Set up bpf perf map to use for output from eBPF to weaver
 	table := bpf.NewTable(bpfModule.TableId("events"), bpfModule)
 	channel := make(chan []byte)
-
 	perfMap, err := bpf.InitPerfMap(table, channel)
 	if err != nil {
 		return err
 	}
 
-	numberOfArgs := len(traceContext.Arguments)
-	var index int
-	var dataTypeOfValue goType
-	output := output{FunctionName: traceContext.FunctionName}
-	var argOutput = make([]outputArg, numberOfArgs)
-	go func() {
-
-		var valueString string
-		var outputValue outputArg
-		for {
-			// First sent values are process info
-			value := <-channel
-			procInfo := procInfo{}
-			err := procInfo.unmarshalBinary(value)
-			if err == nil {
-				output.ProcInfo = procInfo
-				// if err == nil value was proc info struct, else do
-				// not fetch next value
-				value = <-channel //FIXME: This line shouldn't be called if in package mode
-			}
-
-			if globalMode == PACKAGE_MODE {
-				// no argument parsing in package mode
-				printOutput(output)
-				continue
-			}
-
-			// Determine what type it is for interpretation based on order of value coming in
-			dataTypeOfValue = traceContext.Arguments[index].goType
-
-			// If this argument is an array
-			if traceContext.Arguments[index].ArrayLength > 0 {
-
-				arrayValueString := interpretDataByType(value, dataTypeOfValue)
-
-				for i := 0; i < traceContext.Arguments[index].ArrayLength-1; i++ {
-					value := <-channel
-					valueString = interpretDataByType(value, dataTypeOfValue)
-					arrayValueString = arrayValueString + ", " + valueString
-				}
-				outputValue = outputArg{
-					Type:  goTypeToString[dataTypeOfValue] + "_ARRAY",
-					Value: arrayValueString,
-				}
-
-			} else {
-				// This argument is not an array
-
-				valueString = interpretDataByType(value, dataTypeOfValue)
-
-				outputValue = outputArg{
-					Type:  goTypeToString[dataTypeOfValue],
-					Value: valueString,
-				}
-			}
-
-			argOutput[index] = outputValue
-			index++
-			index = index % numberOfArgs
-
-			if index == 0 {
-				output.Args = argOutput
-				printOutput(output)
-			}
-
-		}
-	}()
+	if globalMode == PACKAGE_MODE {
+		go packageModeListen(traceContext.FunctionName, channel)
+	} else {
+		go functionsFileModeListen(traceContext, channel)
+	}
 
 	wg.Done()
 	perfMap.Start()
@@ -238,6 +175,85 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 	perfMap.Stop()
 
 	return nil
+}
+
+func functionsFileModeListen(traceContext *functionTraceContext, rawBytes chan []byte) {
+
+	var (
+		output          = output{FunctionName: traceContext.FunctionName}
+		numberOfArgs    = len(traceContext.Arguments)
+		index           int
+		dataTypeOfValue goType
+		argOutput       = make([]outputArg, numberOfArgs)
+		valueString     string
+		outputValue     outputArg
+	)
+
+	for {
+		value := <-rawBytes
+		procInfo := procInfo{}
+		err := procInfo.unmarshalBinary(value)
+		if err == nil {
+			output.ProcInfo = procInfo
+			// if err == nil value was proc info struct, else do
+			// not fetch next value
+			value = <-rawBytes
+		}
+
+		// Determine what type it is for interpretation based on order of value coming in
+		dataTypeOfValue = traceContext.Arguments[index].goType
+
+		// If this argument is an array
+		if traceContext.Arguments[index].ArrayLength > 0 {
+
+			arrayValueString := interpretDataByType(value, dataTypeOfValue)
+
+			for i := 0; i < traceContext.Arguments[index].ArrayLength-1; i++ {
+				value := <-rawBytes
+				valueString = interpretDataByType(value, dataTypeOfValue)
+				arrayValueString = arrayValueString + ", " + valueString
+			}
+			outputValue = outputArg{
+				Type:  goTypeToString[dataTypeOfValue] + "_ARRAY",
+				Value: arrayValueString,
+			}
+
+		} else {
+			// This argument is not an array
+
+			valueString = interpretDataByType(value, dataTypeOfValue)
+
+			outputValue = outputArg{
+				Type:  goTypeToString[dataTypeOfValue],
+				Value: valueString,
+			}
+		}
+
+		argOutput[index] = outputValue
+		index++
+		index = index % numberOfArgs
+
+		if index == 0 {
+			output.Args = argOutput
+			printOutput(output)
+		}
+	}
+}
+
+// packageModeListen
+func packageModeListen(functionName string, rawBytes chan []byte) {
+	for {
+		value := <-rawBytes
+		procInfo := procInfo{}
+		err := procInfo.unmarshalBinary(value)
+		if err != nil {
+			debugLog("could not read in proccess information: %s\n", err.Error())
+		}
+
+		output := output{FunctionName: functionName}
+		output.ProcInfo = procInfo
+		printOutput(output)
+	}
 }
 
 // interpretDataByType takes raw bytes of a value, and returns a string
