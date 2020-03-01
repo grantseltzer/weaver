@@ -24,7 +24,6 @@ func printOutput(o output) error {
 		return fmt.Errorf("could not marshal output to JSON: %s", err.Error())
 	}
 	fmt.Println(string(b))
-	return nil
 
 	return nil
 }
