@@ -116,6 +116,7 @@ const bpfWithArgsProgramTextTemplate = `
 	}
 `
 
+// bpfText compiles the traceContext into a eBPF program using the above text tempate
 func bpfText(context *functionTraceContext) string {
 	t := template.New("bpf_text")
 	t, err := t.Parse(bpfWithArgsProgramTextTemplate)
@@ -132,9 +133,9 @@ func bpfText(context *functionTraceContext) string {
 	return buf.String()
 }
 
-// loadUprobeAndBPFModule will, based on the passed context, install the bpf program and attach a uprobe to the specified function
-// It then prints results to the designated output stream.
-// This blocks until Ctrl-C or error occurs.
+// loadUprobeAndBPFModule will, based on the passed traceContext, install the bpf program, attach a uprobe to the specified function
+// It then prints results to the designated output stream. Will handle with or without arguments depending on value of 'globalMode'
+// This blocks until runtimeContext.Done() triggers
 func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext context.Context, wg *sync.WaitGroup) error {
 
 	defer runtimeContext.Err()
@@ -164,9 +165,9 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 	}
 
 	if globalMode == PACKAGE_MODE {
-		go packageModeListen(traceContext.FunctionName, channel)
+		go withoutArgumentsListen(traceContext.FunctionName, channel)
 	} else {
-		go functionsFileModeListen(traceContext, channel)
+		go withArgumentsListen(traceContext, channel)
 	}
 
 	wg.Done()
@@ -177,7 +178,9 @@ func loadUprobeAndBPFModule(traceContext *functionTraceContext, runtimeContext c
 	return nil
 }
 
-func functionsFileModeListen(traceContext *functionTraceContext, rawBytes chan []byte) {
+// withArgumentsListen will listen for output from the channel which received output from the eBPF program.
+// It reads in process information, followed by associated arguments and prints them
+func withArgumentsListen(traceContext *functionTraceContext, rawBytes chan []byte) {
 
 	var (
 		output          = output{FunctionName: traceContext.FunctionName}
@@ -240,8 +243,9 @@ func functionsFileModeListen(traceContext *functionTraceContext, rawBytes chan [
 	}
 }
 
-// packageModeListen
-func packageModeListen(functionName string, rawBytes chan []byte) {
+// withoutArgumentsListen will listen for output from the channel which received output from the eBPF program.
+// It reads in process information, puts the function name in the output, and prints it
+func withoutArgumentsListen(functionName string, rawBytes chan []byte) {
 	for {
 		value := <-rawBytes
 		procInfo := procInfo{}
