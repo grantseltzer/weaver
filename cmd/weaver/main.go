@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -13,22 +13,30 @@ import (
 )
 
 var (
-	globalDebug bool
-	globalJSON  bool
+	globalDebug     bool
+	globalDebugeBPF bool
+	globalMode      modeOfOperation = PACKAGE_MODE
 )
 
 func main() {
 
 	app := &cli.App{
 		Name:  "weaver",
-		Usage: "Trace specific executions in Go programs",
+		Usage: "Trace function executions within a specified Go binary file by any calling process",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "functions-file",
 				Value:    "",
-				Usage:    "specify a file which contains line sperated specifications of functions to trace. Each line is of the form: 'func-name(arg1_type, arg2_type, ...)'. Use `weaver --types` for a list of accepted types.",
+				Usage:    "specify a file which contains line sperated specifications of functions to trace. Each line is of the form: 'func-name(arg1_type, arg2_type, ...)'",
 				Required: false,
 				Aliases:  []string{"f"},
+			},
+			&cli.StringSliceFlag{
+				Name:     "packages",
+				Value:    cli.NewStringSlice("main"),
+				Usage:    "specify a list of packages in the go binary to trace all of the functions in",
+				Required: false,
+				Aliases:  []string{"p"},
 			},
 			&cli.BoolFlag{
 				Name:     "types",
@@ -45,25 +53,22 @@ func main() {
 				Aliases:  []string{"d"},
 			},
 			&cli.BoolFlag{
-				Name:     "json",
+				Name:     "debug-ebpf",
 				Value:    false,
-				Usage:    "toggle for output to be in JSON format",
+				Usage:    "print eBPF program text before they're verified and loaded into the kernel",
 				Required: false,
-				Aliases:  []string{"JSON", "j"},
 			},
 		},
 		Action: func(c *cli.Context) error {
-			if c.NumFlags() == 0 {
-				fmt.Println("Use weaver --help")
-				os.Exit(0)
-			}
 			return entry(c)
 		},
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		fmt.Println("Try weaver --help")
+		os.Exit(-1)
 	}
 }
 
@@ -79,9 +84,9 @@ func entry(c *cli.Context) error {
 		globalDebug = true
 	}
 
-	// Turn on debug logigng
-	if c.Bool("json") {
-		globalJSON = true
+	// Turn on logging of eBPF programs
+	if c.Bool("debug-ebpf") {
+		globalDebugeBPF = true
 	}
 
 	// Just list acceptable golang types
@@ -90,7 +95,16 @@ func entry(c *cli.Context) error {
 		return nil
 	}
 
-	binaryFullPath, err := filepath.Abs(c.Args().Get(0))
+	if c.IsSet("functions-file") {
+		globalMode = FUNC_FILE_MODE
+	}
+
+	binaryArg := c.Args().Get(0)
+	if binaryArg == "" {
+		return errors.New("must specify a binary argument")
+	}
+
+	binaryFullPath, err := filepath.Abs(binaryArg)
 	if err != nil {
 		return err
 	}
@@ -98,8 +112,14 @@ func entry(c *cli.Context) error {
 	functionsFilePath := c.String("functions-file")
 
 	// Read in functions file
-	if functionsFilePath != "" {
+	if globalMode == FUNC_FILE_MODE {
 		contexts, err = read_functions_file(functionsFilePath)
+		if err != nil {
+			return err
+		}
+	} else {
+		packagesToTrace := c.StringSlice("packages")
+		contexts, err = read_symbols_from_binary(binaryFullPath, packagesToTrace)
 		if err != nil {
 			return err
 		}
@@ -118,6 +138,7 @@ func entry(c *cli.Context) error {
 	for i := range contexts {
 		wg.Add(1)
 		contexts[i].binaryName = binaryFullPath
+		wg.Add(1)
 		go loadUprobeAndBPFModule(&contexts[i], runtimeContext, &wg)
 	}
 

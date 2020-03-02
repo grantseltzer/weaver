@@ -23,9 +23,9 @@ func read_functions_file(path string) ([]functionTraceContext, error) {
 			continue
 		}
 
-		debugLog("parsing: %s\n", funcString)
-
-		newContext := functionTraceContext{}
+		newContext := functionTraceContext{
+			HasArguments: true,
+		}
 
 		err := parseFunctionAndArgumentTypes(&newContext, funcString)
 		if err != nil {
