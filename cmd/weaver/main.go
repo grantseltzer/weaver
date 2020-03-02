@@ -113,7 +113,7 @@ func entry(c *cli.Context) error {
 
 	// Read in functions file
 	if globalMode == FUNC_FILE_MODE {
-		contexts, err = read_functions_file(functionsFilePath)
+		contexts, err = readFunctionsFile(functionsFilePath)
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,6 @@ func entry(c *cli.Context) error {
 	for i := range contexts {
 		wg.Add(1)
 		contexts[i].binaryName = binaryFullPath
-		wg.Add(1)
 		go loadUprobeAndBPFModule(&contexts[i], runtimeContext, &wg)
 	}
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func read_functions_file(path string) ([]functionTraceContext, error) {
+func readFunctionsFile(path string) ([]functionTraceContext, error) {
 
 	content, err := ioutil.ReadFile(path)
 	if err != nil {

@@ -243,6 +243,7 @@ func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs st
 	parseStack := &stack{}
 
 	var invalidChars = "+&%$#@!<>?\";:{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
+	argumentNumber := 0
 
 	for i := range funcAndArgs {
 
@@ -259,7 +260,8 @@ func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs st
 
 		if funcAndArgs[i] == ',' || funcAndArgs[i] == ')' {
 			var arg argument
-			arg.VariableName = fmt.Sprintf("argument%d", i)
+			argumentNumber += 1
+			arg.VariableName = fmt.Sprintf("argument%d", argumentNumber)
 			populateArgumentValues(parseStack, &arg)
 			context.Arguments = append(context.Arguments, arg)
 
