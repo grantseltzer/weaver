@@ -1,4 +1,4 @@
-To generate new test_data:
+To generate new smoke test test_data:
 
 - As functions are added to cmd/tester/main.go:
     - make sure they're called in main

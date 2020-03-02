@@ -13,7 +13,7 @@ func readFunctionsFile(path string) ([]functionTraceContext, error) {
 		return nil, fmt.Errorf("could not read functions file")
 	}
 
-	functionStringsToTrace := strings.Split(string(content), "\n")
+	functionStringsToTrace := removeDuplicates(strings.Split(string(content), "\n"))
 
 	contexts := []functionTraceContext{}
 
@@ -42,4 +42,18 @@ func readFunctionsFile(path string) ([]functionTraceContext, error) {
 	}
 
 	return contexts, nil
+}
+
+func removeDuplicates(elements []string) []string {
+	encountered := map[string]bool{}
+
+	for i := range elements {
+		encountered[elements[i]] = true
+	}
+
+	result := []string{}
+	for key, _ := range encountered {
+		result = append(result, key)
+	}
+	return result
 }

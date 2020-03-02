@@ -242,8 +242,10 @@ func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs st
 
 	parseStack := &stack{}
 
-	var invalidChars = "+&%$#@!<>?\";:{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
+	var invalidChars = "+&%$#@!^<>?\";:{}=-`~" //fixme: this isn't exhaustive, doesn't take into account digits as first char
 	argumentNumber := 0
+
+	completed := false
 
 	for i := range funcAndArgs {
 
@@ -269,10 +271,16 @@ func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs st
 				parseStack.clear()
 				continue
 			}
+
+			completed = true
 			return nil
 		}
 
 		parseStack.push(funcAndArgs[i])
+	}
+
+	if !completed {
+		return fmt.Errorf("incomplete function signature: %s", funcAndArgs)
 	}
 
 	return nil
