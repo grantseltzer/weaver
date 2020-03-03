@@ -29,7 +29,11 @@ bin/tester: cmd/tester
 > $(GOENV) go build $(MOD) -o ./bin/tester ./cmd/tester/...
 .PHONY: bin/tester
 
-test: tests/run_smoke_test.sh
+# unit tests
+test:
+> go test -v ./cmd/weaver/...
+
+smoke-test: tests/run_smoke_test.sh
 > sh -c "tests/run_smoke_test.sh"
 
 clean:
