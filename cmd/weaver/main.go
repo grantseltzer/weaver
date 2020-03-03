@@ -16,6 +16,9 @@ var (
 	globalDebug     bool
 	globalDebugeBPF bool
 	globalMode      modeOfOperation = PACKAGE_MODE
+
+	globalOutput = os.Stdout
+	globalError  = os.Stderr
 )
 
 func main() {
@@ -66,8 +69,8 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Try weaver --help")
+		fmt.Fprintln(globalError, err)
+		fmt.Fprintln(globalError, "Try weaver --help")
 		os.Exit(-1)
 	}
 }

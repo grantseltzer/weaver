@@ -3,12 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 )
 
 type output struct {
 	FunctionName string      `json:"functionName"`
-	Args         []outputArg `json:"args"`
+	Args         []outputArg `json:"args,omitempty"`
 	ProcInfo     procInfo    `json:"procInfo"`
 }
 
@@ -23,19 +22,18 @@ func printOutput(o output) error {
 	if err != nil {
 		return fmt.Errorf("could not marshal output to JSON: %s", err.Error())
 	}
-	fmt.Println(string(b))
-
+	fmt.Fprintf(globalOutput, "%s", string(b))
 	return nil
 }
 
 func debugLog(format string, a ...interface{}) {
 	if globalDebug {
-		fmt.Fprintf(os.Stderr, "\x1b[96m"+format+"\x1b[0m", a...)
+		fmt.Fprintf(globalError, "\x1b[96m"+format+"\x1b[0m", a...)
 	}
 }
 
 func debugeBPFLog(format string, a ...interface{}) {
 	if globalDebugeBPF {
-		fmt.Fprintf(os.Stderr, "\x1b[96m"+format+"\x1b[0m", a...)
+		fmt.Fprintf(globalError, "\x1b[96m"+format+"\x1b[0m", a...)
 	}
 }

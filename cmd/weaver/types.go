@@ -212,7 +212,7 @@ var supportedTypes = []string{
 
 func listAvailableTypes() {
 	for _, t := range supportedTypes {
-		fmt.Println(t)
+		fmt.Fprintln(globalOutput, t)
 	}
 }
 
