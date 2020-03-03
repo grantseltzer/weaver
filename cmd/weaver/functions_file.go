@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -15,7 +16,7 @@ func readFunctionsFile(path string) ([]functionTraceContext, error) {
 
 	functionStringsToTrace := removeDuplicates(strings.Split(string(content), "\n"))
 
-	contexts := []functionTraceContext{}
+	var contexts []functionTraceContext
 
 	for _, funcString := range functionStringsToTrace {
 
@@ -38,9 +39,11 @@ func readFunctionsFile(path string) ([]functionTraceContext, error) {
 		}
 
 		contexts = append(contexts, newContext)
-
 	}
 
+	if contexts == nil {
+		return nil, errors.New("no trace contexts created, empty file")
+	}
 	return contexts, nil
 }
 

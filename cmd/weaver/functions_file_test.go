@@ -89,12 +89,12 @@ func TestReadFunctionsFile(t *testing.T) {
 			expectedContexts: expectedValueErrorD,
 			expectedError:    expectedErrorD,
 		},
-		// {
-		// 	testName:         "",
-		// 	fileContent:      errorValueE,
-		// 	expectedContexts: expectedValueErrorE,
-		// 	expectedError:    expectedErrorE,
-		// },
+		{
+			testName:         "empty file",
+			fileContent:      errorValueE,
+			expectedContexts: expectedValueErrorE,
+			expectedError:    expectedErrorE,
+		},
 	}
 
 	for _, testcase := range testCases {
@@ -412,6 +412,7 @@ const contentE = `
 main.foobar(int, int64)
 main.buzbaz(bool, rune)
 
+
 `
 
 var expectedValueE = []functionTraceContext{
@@ -611,4 +612,4 @@ var expectedErrorD = errors.New("could not parse function string 'main.foobar(in
 const errorValueE = ``
 
 var expectedValueErrorE []functionTraceContext = nil
-var expectedErrorE = errors.New("")
+var expectedErrorE error = errors.New("no trace contexts created, empty file")
