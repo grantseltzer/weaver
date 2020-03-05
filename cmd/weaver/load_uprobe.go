@@ -28,6 +28,8 @@ const bpfWithArgsProgramTextTemplate = `
 		char comm[TASK_COMM_LEN]; // 16 bytes
 	};
 
+
+
 	inline int print_symbol_arg(struct pt_regs *ctx) {
 		
 		// get process info
@@ -55,14 +57,32 @@ const bpfWithArgsProgramTextTemplate = `
 			// [TEMPLATE] Traverse over each argument in this trace context
 			{{range $arg_index, $arg_element := .Arguments}}
 
-				// [TEMPLATE] If this argument is an array
-				{{if gt $arg_element.ArrayLength 0}}
+			    // [TEMPLATE] If this argument is a slice
+				{{if eq $arg_element.IsSlice true}}
+
+					// read in bytes for:
+					// (8) - array address
+					// (8) - array length
+					// (8) - array cap
+					unsigned long {{$arg_element.VariableName}}_addr;
+					unsigned long {{$arg_element.VariableName}}_length;
+					unsigned long {{$arg_element.VariableName}}_cap;
+
+					unsigned int i_{{$arg_element.VariableName}};
+
+					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < {{$arg_element.VariableName}}_length; i_{{$arg_element.VariableName}}++) {
+						
+					}
+
+				
+				// [TEMPLATE] If it's not a slice, but this argument is an array
+				{{else if gt $arg_element.ArrayLength 0}}
 
 					unsigned int i_{{$arg_element.VariableName}};
 					void* loopAddr_{{$arg_element.VariableName}} = stackAddr+{{$arg_element.StartingOffset}};
 					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < {{$arg_element.ArrayLength}}; i_{{$arg_element.VariableName}}++) {
 						
-						// [TEMPLATE] This is an array of strings
+						// [TEMPLATE] This is NOT an array of strings
 						{{if ne $arg_element.CType "char *" }}
 
 							{{$arg_element.CType}} {{$arg_element.VariableName}};
@@ -70,7 +90,7 @@ const bpfWithArgsProgramTextTemplate = `
 							events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
 							loopAddr_{{$arg_element.VariableName}} += {{$arg_element.TypeSize}};
 						
-						// [TEMPLATE] This is an array of anything else
+						// [TEMPLATE] This is an array of strings
 						{{else}}
 
 							unsigned long {{$arg_element.VariableName}}_length;

@@ -29,6 +29,7 @@ type argument struct {
 	PrintfFormat   string
 	TypeSize       int
 	ArrayLength    int // Set as 0 if not array
+	IsSlice        bool
 }
 
 type procInfo struct {

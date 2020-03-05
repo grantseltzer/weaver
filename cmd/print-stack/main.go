@@ -18,6 +18,11 @@ const textTemplate = `
 	inline int print_stack(struct pt_regs *ctx) {
 		void* stackAddr = (void*)ctx->sp;
 
+		unsigned int slice;
+		bpf_probe_read(&slice, sizeof(slice), stackAddr+8); 
+		bpf_trace_printk("0x%x\n", slice);
+		bpf_trace_printk("0x%x\n", stackAddr);
+
 		int i;
 		char y;
 		for (i = 0; i < 50; i++) {
