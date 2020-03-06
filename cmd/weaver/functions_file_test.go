@@ -119,7 +119,7 @@ func TestReadFunctionsFile(t *testing.T) {
 			}
 
 			// Compare contexts with expectedContexts
-			isEqual := assert.Equal(t, testcase.expectedContexts, contexts)
+			isEqual := assert.ElementsMatch(t, testcase.expectedContexts, contexts)
 			if !isEqual {
 				t.Error("Test failed.")
 			}
