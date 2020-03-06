@@ -156,6 +156,12 @@ func entry(c *cli.Context) error {
 	// Install eBPF program for each function to trace
 	for i := range contexts {
 		wg.Add(1)
+
+		// Apply filters
+		if pid > 0 {
+			contexts[i].Filters.Pid = uint32(pid)
+		}
+
 		contexts[i].binaryName = binaryFullPath
 		go loadUprobeAndBPFModule(&contexts[i], runtimeContext, &wg)
 	}

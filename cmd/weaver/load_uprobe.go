@@ -38,8 +38,15 @@ const bpfWithArgsProgramTextTemplate = `
 		procInfo.ppid = task->real_parent->tgid;
 		bpf_get_current_comm(&procInfo.comm, sizeof(procInfo.comm));
 
-		events.perf_submit(ctx, &procInfo, sizeof(procInfo));
+		{{if gt .Filters.Pid 0}}
+		// apply pid filters
+		if (procInfo.pid != {{ .Filters.Pid }}) {
+			return 0;
+		}
+		{{end}}
 
+		// submit process info
+		events.perf_submit(ctx, &procInfo, sizeof(procInfo));
 
 		{{if eq .HasArguments true}}
 

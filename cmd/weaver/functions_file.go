@@ -25,6 +25,7 @@ func readFunctionsFile(path string) ([]functionTraceContext, error) {
 		}
 
 		newContext := functionTraceContext{
+			Filters:      filters{},
 			HasArguments: true,
 		}
 
