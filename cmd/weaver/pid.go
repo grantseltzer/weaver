@@ -12,7 +12,7 @@ func getBinaryFromPID(pid int) (string, error) {
 	_, err := os.Stat(exe)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", errors.New("process not running")
+			return "", fmt.Errorf("%s: binary does not exist: %s", err.Error(), exe)
 		}
 
 		return "", err
