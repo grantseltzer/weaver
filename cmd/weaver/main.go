@@ -61,6 +61,12 @@ func main() {
 				Usage:    "print eBPF program text before they're verified and loaded into the kernel",
 				Required: false,
 			},
+			&cli.IntFlag{
+				Name:     "pid",
+				Value:    -1,
+				Usage:    "trace functions of already running Go binary using PID",
+				Required: false,
+			},
 		},
 		Action: func(c *cli.Context) error {
 			return entry(c)
@@ -102,9 +108,19 @@ func entry(c *cli.Context) error {
 		globalMode = FUNC_FILE_MODE
 	}
 
-	binaryArg := c.Args().Get(0)
-	if binaryArg == "" {
-		return errors.New("must specify a binary argument")
+	var pid int
+	var binaryArg string
+	if c.IsSet("pid") {
+		pid = c.Int("pid")
+		binaryArg, err = getBinaryFromPID(pid)
+		if err != nil {
+			return err
+		}
+	} else {
+		binaryArg = c.Args().Get(0)
+		if binaryArg == "" {
+			return errors.New("must specify a binary argument")
+		}
 	}
 
 	binaryFullPath, err := filepath.Abs(binaryArg)
@@ -140,6 +156,12 @@ func entry(c *cli.Context) error {
 	// Install eBPF program for each function to trace
 	for i := range contexts {
 		wg.Add(1)
+
+		// Apply filters
+		if pid > 0 {
+			contexts[i].Filters.Pid = uint32(pid)
+		}
+
 		contexts[i].binaryName = binaryFullPath
 		go loadUprobeAndBPFModule(&contexts[i], runtimeContext, &wg)
 	}

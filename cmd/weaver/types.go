@@ -9,8 +9,13 @@ import (
 	"strings"
 )
 
+type filters struct {
+	Pid uint32
+}
+
 type functionTraceContext struct {
 	binaryName   string
+	Filters      filters
 	FunctionName string
 	HasArguments bool       // used for parsing text template
 	Arguments    []argument `json:",omitempty"`

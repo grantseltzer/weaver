@@ -28,6 +28,7 @@ func read_symbols_from_binary(binaryPath string, packagesToTrace []string) ([]fu
 		for _, pkg := range packagesToTrace {
 			if strings.HasPrefix(sym.Name, pkg+".") {
 				x := functionTraceContext{
+					Filters:      filters{},
 					binaryName:   binaryPath,
 					HasArguments: false,
 					FunctionName: sym.Name,
