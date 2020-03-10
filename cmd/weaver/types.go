@@ -294,7 +294,17 @@ func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs st
 
 func populateArgumentValues(parseStack *stack, arg *argument) error {
 
-	if strings.Contains(parseStack.string(), "[") {
+	if strings.Contains(parseStack.string(), "[]") {
+		goType, err := parseSliceString(parseStack.string())
+		if err != nil {
+			return err
+		}
+
+		arg.IsSlice = true
+		arg.goType = goType
+		arg.PrintfFormat = stringfFormat(goType)
+		arg.CType = goToCType[goType]
+	} else if strings.Contains(parseStack.string(), "[") {
 		length, goType, err := parseArrayString(parseStack.string())
 		if err != nil {
 			return err
@@ -339,4 +349,18 @@ func parseArrayString(s string) (int, goType, error) {
 	}
 
 	return length, gotype, nil
+}
+
+func parseSliceString(s string) (goType, error) {
+	subs := strings.Split(s, "]")
+	if len(subs) != 2 && subs[0] != "[" {
+		return INVALID, errors.New("malformed array parameter")
+	}
+
+	goType := stringToGoType[strings.ToUpper(subs[1])]
+	if goType == INVALID {
+		return INVALID, errors.New("malformed slice type")
+	}
+
+	return goType, nil
 }

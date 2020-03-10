@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -54,29 +55,38 @@ const bpfWithArgsProgramTextTemplate = `
 
 			void* stackAddr = (void*)ctx->sp;
 
-			// [TEMPLATE] Traverse over each argument in this trace context
 			{{range $arg_index, $arg_element := .Arguments}}
 
-			    // [TEMPLATE] If this argument is a slice
 				{{if eq $arg_element.IsSlice true}}
+			   		// [TEMPLATE] This argument is a slice
 
 					// read in bytes for:
 					// (8) - array address
 					// (8) - array length
 					// (8) - array cap
-					unsigned long {{$arg_element.VariableName}}_addr;
+					// submit length first before values:
+					unsigned long {{$arg_element.VariableName}}_starting_addr;
 					unsigned long {{$arg_element.VariableName}}_length;
-					unsigned long {{$arg_element.VariableName}}_cap;
+					bpf_trace_printk("0x%x\n", (void*){{$arg_element.VariableName}}_starting_addr);
+					bpf_trace_printk("%d\n",  {{$arg_element.VariableName}}_length);
+
+					bpf_probe_read(&{{$arg_element.VariableName}}_starting_addr, sizeof({{$arg_element.VariableName}}_starting_addr), stackAddr+8);
+					bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+16);
+
+					events.perf_submit(ctx, &{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length));
 
 					unsigned int i_{{$arg_element.VariableName}};
 
-					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < {{$arg_element.VariableName}}_length; i_{{$arg_element.VariableName}}++) {
-						
+					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < 4; i_{{$arg_element.VariableName}}++) {
+						{{$arg_element.CType}} {{$arg_element.VariableName}};
+						bpf_probe_read(&{{$arg_element.VariableName}},  sizeof({{$arg_element.VariableName}}), (void*){{$arg_element.VariableName}}_starting_addr);
+						events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
+						{{$arg_element.VariableName}}_starting_addr += {{$arg_element.TypeSize}};
 					}
 
 				
-				// [TEMPLATE] If it's not a slice, but this argument is an array
 				{{else if gt $arg_element.ArrayLength 0}}
+				// [TEMPLATE] It's not a slice, but this argument is an array
 
 					unsigned int i_{{$arg_element.VariableName}};
 					void* loopAddr_{{$arg_element.VariableName}} = stackAddr+{{$arg_element.StartingOffset}};
@@ -233,8 +243,30 @@ func withArgumentsListen(traceContext *functionTraceContext, rawBytes chan []byt
 		// Determine what type it is for interpretation based on order of value coming in
 		dataTypeOfValue = traceContext.Arguments[index].goType
 
-		// If this argument is an array
-		if traceContext.Arguments[index].ArrayLength > 0 {
+		// If this argument is a slice
+		if traceContext.Arguments[index].IsSlice {
+			// First receive length
+			// then keep reading values
+			sliceLengthString := interpretDataByType(value, INT)
+			sliceLength, err := strconv.Atoi(sliceLengthString)
+			if err != nil {
+				log.Fatalf("could not interpret slice length, can't recover: %v\n", err)
+			}
+
+			var sliceValues string
+
+			for i := 0; i < sliceLength; i++ {
+				value := <-rawBytes
+				valueString = interpretDataByType(value, dataTypeOfValue)
+				sliceValues = sliceValues + ", " + valueString
+			}
+
+			outputValue = outputArg{
+				Type:  goTypeToString[dataTypeOfValue] + "_SLICE",
+				Value: sliceValues,
+			}
+
+		} else if traceContext.Arguments[index].ArrayLength > 0 { // If this argument is an array
 
 			arrayValueString := interpretDataByType(value, dataTypeOfValue)
 
