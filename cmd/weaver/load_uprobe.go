@@ -77,11 +77,22 @@ const bpfWithArgsProgramTextTemplate = `
 
 					unsigned int i_{{$arg_element.VariableName}};
 
-					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < 4; i_{{$arg_element.VariableName}}++) {
+					// XXX: If we use {{$arg_element.VariableName}}_length as the loop condition
+					// the eBPF verifier will reject the program (as of early 2020, but this may change in the future)
+					// So instead we use an arbitrary, but large enough, number as the loop condition and check
+					// for length of slice inside the loop.
+
+					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < 1000; i_{{$arg_element.VariableName}}++) {
+						if (i_{{$arg_element.VariableName}} == {{$arg_element.VariableName}}_length) {
+							break;
+						}
+
 						{{$arg_element.CType}} {{$arg_element.VariableName}};
 						bpf_probe_read(&{{$arg_element.VariableName}},  sizeof({{$arg_element.VariableName}}), (void*){{$arg_element.VariableName}}_starting_addr);
 						events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
 						{{$arg_element.VariableName}}_starting_addr += {{$arg_element.TypeSize}};
+
+
 					}
 
 				
@@ -253,13 +264,16 @@ func withArgumentsListen(traceContext *functionTraceContext, rawBytes chan []byt
 				log.Fatalf("could not interpret slice length, can't recover: %v\n", err)
 			}
 
-			var sliceValues string
+			var sliceValues string = "["
 
 			for i := 0; i < sliceLength; i++ {
 				value := <-rawBytes
 				valueString = interpretDataByType(value, dataTypeOfValue)
-				sliceValues = sliceValues + ", " + valueString
+
+				sliceValues += " " + valueString
 			}
+
+			sliceValues += " ]"
 
 			outputValue = outputArg{
 				Type:  goTypeToString[dataTypeOfValue] + "_SLICE",
