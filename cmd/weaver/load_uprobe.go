@@ -61,20 +61,19 @@ const bpfWithArgsProgramTextTemplate = `
 			   		// [TEMPLATE] This argument is a slice
 
 					// read in bytes for:
-					// (8) - array address
-					// (8) - array length
-					// (8) - array cap
-					// submit length first before values:
+					// array address (8 bytes)
+					// array length (8 bytes)
+					// followed in memory by slice cap which is not needed/read (8 bytes)
+
 					unsigned long {{$arg_element.VariableName}}_starting_addr;
 					unsigned long {{$arg_element.VariableName}}_length;
-					bpf_trace_printk("0x%x\n", (void*){{$arg_element.VariableName}}_starting_addr);
-					bpf_trace_printk("%d\n",  {{$arg_element.VariableName}}_length);
-
 					bpf_probe_read(&{{$arg_element.VariableName}}_starting_addr, sizeof({{$arg_element.VariableName}}_starting_addr), stackAddr+8);
 					bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+16);
 
+					// submit length first before values:
 					events.perf_submit(ctx, &{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length));
 
+					// iterator
 					unsigned int i_{{$arg_element.VariableName}};
 
 					// XXX: If we use {{$arg_element.VariableName}}_length as the loop condition
@@ -87,11 +86,35 @@ const bpfWithArgsProgramTextTemplate = `
 							break;
 						}
 
-						{{$arg_element.CType}} {{$arg_element.VariableName}};
-						bpf_probe_read(&{{$arg_element.VariableName}},  sizeof({{$arg_element.VariableName}}), (void*){{$arg_element.VariableName}}_starting_addr);
-						events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
-						{{$arg_element.VariableName}}_starting_addr += {{$arg_element.TypeSize}};
+						{{if ne $arg_element.CType "char *" }}
+		
+							// [TEMPLATE] Not a slice of strings
+							{{$arg_element.CType}} {{$arg_element.VariableName}};
+							bpf_probe_read(&{{$arg_element.VariableName}},  sizeof({{$arg_element.VariableName}}), (void*){{$arg_element.VariableName}}_starting_addr);
+							events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
+							{{$arg_element.VariableName}}_starting_addr += {{$arg_element.TypeSize}};
 
+						{{else}}
+
+							// [TEMPLATE] Slice of strings
+							unsigned long {{$arg_element.VariableName}}_length;
+							bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), (void*){{$arg_element.VariableName}}_starting_addr+8);
+							if ({{$arg_element.VariableName}}_length > 16 ) {
+								{{$arg_element.VariableName}}_length = 16;
+							}
+
+							unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
+							
+							// use long double to have up to a 16 character string by reading in the raw bytes
+							long double* {{$arg_element.VariableName}}_ptr;
+							long double  {{$arg_element.VariableName}};
+							bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), (void*){{$arg_element.VariableName}}_starting_addr);
+							bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
+						
+							events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
+							{{$arg_element.VariableName}}_starting_addr += 16;
+
+						{{end}}
 
 					}
 
