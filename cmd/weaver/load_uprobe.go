@@ -30,7 +30,6 @@ const bpfWithArgsProgramTextTemplate = `
 	};
 
 
-
 	inline int print_symbol_arg(struct pt_regs *ctx) {
 		
 		// get process info
