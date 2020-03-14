@@ -29,8 +29,6 @@ const bpfWithArgsProgramTextTemplate = `
 		char comm[TASK_COMM_LEN]; // 16 bytes
 	};
 
-
-
 	inline int print_symbol_arg(struct pt_regs *ctx) {
 		
 		// get process info

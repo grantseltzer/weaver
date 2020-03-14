@@ -90,7 +90,7 @@ Currently weaver supports basic data types but getting support for user defined 
 
 ## Build
 
-`make` will compile the weaver binary to `bin/weaver`
+`make` will compile the weaver binary to `bin/weaver` (It also creates the smoke test binary and print-stack utility)
 
 <i>Can't build? Please make an issue!</i>
 
