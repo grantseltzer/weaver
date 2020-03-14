@@ -21,7 +21,7 @@ func TestPrintOutput(t *testing.T) {
 		{
 			testName:       "everything is fine",
 			expectedError:  nil,
-			expectedOutput: `{"functionName":"main.testFunction","args":[{"type":"INT","value":"420"}],"procInfo":{}}`,
+			expectedOutput: `{"functionName":"main.testFunction","args":[{"type":"INT","value":"420"}],"procInfo":{}}` + "\n",
 			output: output{
 				FunctionName: "main.testFunction",
 				Args: []outputArg{
@@ -35,7 +35,7 @@ func TestPrintOutput(t *testing.T) {
 		{
 			testName:       "empty args",
 			expectedError:  nil,
-			expectedOutput: `{"functionName":"main.testFunction","procInfo":{}}`,
+			expectedOutput: `{"functionName":"main.testFunction","procInfo":{}}` + "\n",
 			output: output{
 				FunctionName: "main.testFunction",
 				Args:         nil,
@@ -44,13 +44,13 @@ func TestPrintOutput(t *testing.T) {
 		{
 			testName:       "empty output",
 			expectedError:  nil,
-			expectedOutput: `{"functionName":"","procInfo":{}}`,
+			expectedOutput: `{"functionName":"","procInfo":{}}` + "\n",
 			output:         output{},
 		},
 		{
 			testName:       "erroneous functionname?",
 			expectedError:  nil,
-			expectedOutput: `{"functionName":"\u0000","procInfo":{}}`,
+			expectedOutput: `{"functionName":"\u0000","procInfo":{}}` + "\n",
 			output: output{
 				FunctionName: string(0x0),
 			},
