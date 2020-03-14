@@ -12,6 +12,10 @@ Weaver is a CLI tool that allows you to trace Go programs in order to inspect wh
 
 ## Quick Start 
 
+There are two modes of operation, one that uses a 'functions file', and one that extracts a symbol table from a passed binary and filters by Go packages. More information on functionality in [docs](/docs).
+
+### Functions file
+
 Take the following example program: 
 
 <i>test_prog.go</i>
@@ -28,7 +32,6 @@ func main() {
 	test_function(3, [2]int{1, 2})
 	other_test_function('a', 33)
 }
-
 ```
 
 Let's say we want to know what values are passed to `test_function` and `other_test_function` whenever the program is run. Once the program is compiled (`make`) we just have to create a file which specifies each function to trace:
@@ -50,38 +53,44 @@ sudo weaver -f /path/to/functions_to_trace.txt /path/to/test-prog-binary
 Weaver will then sit idle without any output until `test-prog` is run and the `test_function` and `other_test_function` functions are called. This will also work on an already running Go Program.
 
 ```
-+--------------------+--------------+-----------+-------+
-|   FUNCTION NAME    | ARG POSITION |   TYPE    | VALUE |
-+--------------------+--------------+-----------+-------+
-| main.test_function | 0            | INT       | 3     |
-| main.test_function | 1            | INT_ARRAY | 1, 2  |
-+--------------------+--------------+-----------+-------+
-+--------------------------+--------------+-------+-------+
-|      FUNCTION NAME       | ARG POSITION | TYPE  | VALUE |
-+--------------------------+--------------+-------+-------+
-| main.other_test_function | 0            | RUNE  | a     |
-| main.other_test_function | 1            | INT64 | 33    |
-+--------------------------+--------------+-------+-------+
+{"functionName":"main.other_test_function","args":[{"type":"RUNE","value":"a"},{"type":"INT64","value":"33"}],"procInfo":{"pid":43300,"ppid":42754,"comm":"test-prog-binar"}}
+{"functionName":"main.test_function","args":[{"type":"INT","value":"3"},{"type":"INT_ARRAY","value":"1, 2"}],"procInfo":{"pid":43300,"ppid":42754,"comm":"test-prog-binar"}}
+```
+
+### Package mode
+
+For the same example Go program as above, you can choose to not specify a functions file. The command would like like this:
+
+```
+sudo weaver /path/to/test-prog-binary
+```
+
+This will default to only tracing functions in the `main` package, however you can use the `--packages` flag to specify a comma seperated list of packages (typially of the form `github.com/x/y`)
+
+Output does include argument vlaues in this mode.
+
+```
+{"functionName":"main.main","procInfo":{"pid":44411,"ppid":42754,"comm":"test-prog-binar"}}
+{"functionName":"main.test_function","procInfo":{"pid":44411,"ppid":42754,"comm":"test-prog-binar"}}
 ```
 
 ## Note on supported types
 
-Currently weaver supports basic data types but getting support for user defined types is a high priority. Getting following types defined are also a work in progress:
+Currently weaver supports basic data types but getting support for user defined types is a high priority. Getting following types defined are a work in progress:
 
 - arbitrary pointers
-- slices
 - user/stdlib defined structs
 - user/stdlib defined interfaces
 
 
-## Dependencies
+## System Dependencies
 
 - [bcc](https://github.com/iovisor/bcc/blob/master/INSTALL.md)
 - linux kernel version > 4.14 (please make bug reports if your kernel version doesn't work)
 
 ## Build
 
-`make weaver` will compile the weaver binary to `bin/weaver`
+`make` will compile the weaver binary to `bin/weaver` (It also creates the smoke test binary and print-stack utility)
 
 <i>Can't build? Please make an issue!</i>
 

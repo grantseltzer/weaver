@@ -18,7 +18,7 @@ func determineStackOffsets(context *functionTraceContext) error {
 		}
 	}
 
-	currentIndex := 8
+	currentIndex := 8 // Ignore basepointer stored at top of stack (bytes 0-7)
 	bytesInCurrentWindow := 0
 
 	for i := range context.Arguments {

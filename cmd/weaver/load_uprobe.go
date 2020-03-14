@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -52,17 +53,78 @@ const bpfWithArgsProgramTextTemplate = `
 
 			void* stackAddr = (void*)ctx->sp;
 
-			// [TEMPLATE] Traverse over each argument in this trace context
 			{{range $arg_index, $arg_element := .Arguments}}
 
-				// [TEMPLATE] If this argument is an array
-				{{if gt $arg_element.ArrayLength 0}}
+				{{if eq $arg_element.IsSlice true}}
+			   		// [TEMPLATE] This argument is a slice
+
+					// read in bytes for:
+					// array address (8 bytes)
+					// array length (8 bytes)
+					// followed in memory by slice cap which is not needed/read (8 bytes)
+
+					unsigned long {{$arg_element.VariableName}}_starting_addr;
+					unsigned long {{$arg_element.VariableName}}_length;
+					bpf_probe_read(&{{$arg_element.VariableName}}_starting_addr, sizeof({{$arg_element.VariableName}}_starting_addr), stackAddr+8);
+					bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+16);
+
+					// submit length first before values:
+					events.perf_submit(ctx, &{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length));
+
+					// iterator
+					unsigned int i_{{$arg_element.VariableName}};
+
+					// XXX: If we use {{$arg_element.VariableName}}_length as the loop condition
+					// the eBPF verifier will reject the program (as of early 2020, but this may change in the future)
+					// So instead we use an arbitrary, but large enough, number as the loop condition and check
+					// for length of slice inside the loop.
+
+					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < 1000; i_{{$arg_element.VariableName}}++) {
+						if (i_{{$arg_element.VariableName}} == {{$arg_element.VariableName}}_length) {
+							break;
+						}
+
+						{{if ne $arg_element.CType "char *" }}
+		
+							// [TEMPLATE] Not a slice of strings
+							{{$arg_element.CType}} {{$arg_element.VariableName}};
+							bpf_probe_read(&{{$arg_element.VariableName}},  sizeof({{$arg_element.VariableName}}), (void*){{$arg_element.VariableName}}_starting_addr);
+							events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
+							{{$arg_element.VariableName}}_starting_addr += {{$arg_element.TypeSize}};
+
+						{{else}}
+
+							// [TEMPLATE] Slice of strings
+							unsigned long {{$arg_element.VariableName}}_length;
+							bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), (void*){{$arg_element.VariableName}}_starting_addr+8);
+							if ({{$arg_element.VariableName}}_length > 16 ) {
+								{{$arg_element.VariableName}}_length = 16;
+							}
+
+							unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
+							
+							// use long double to have up to a 16 character string by reading in the raw bytes
+							long double* {{$arg_element.VariableName}}_ptr;
+							long double  {{$arg_element.VariableName}};
+							bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), (void*){{$arg_element.VariableName}}_starting_addr);
+							bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
+						
+							events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
+							{{$arg_element.VariableName}}_starting_addr += 16;
+
+						{{end}}
+
+					}
+
+				
+				{{else if gt $arg_element.ArrayLength 0}}
+				// [TEMPLATE] It's not a slice, but this argument is an array
 
 					unsigned int i_{{$arg_element.VariableName}};
 					void* loopAddr_{{$arg_element.VariableName}} = stackAddr+{{$arg_element.StartingOffset}};
 					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < {{$arg_element.ArrayLength}}; i_{{$arg_element.VariableName}}++) {
 						
-						// [TEMPLATE] This is an array of strings
+						// [TEMPLATE] This is NOT an array of strings
 						{{if ne $arg_element.CType "char *" }}
 
 							{{$arg_element.CType}} {{$arg_element.VariableName}};
@@ -70,7 +132,7 @@ const bpfWithArgsProgramTextTemplate = `
 							events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
 							loopAddr_{{$arg_element.VariableName}} += {{$arg_element.TypeSize}};
 						
-						// [TEMPLATE] This is an array of anything else
+						// [TEMPLATE] This is an array of strings
 						{{else}}
 
 							unsigned long {{$arg_element.VariableName}}_length;
@@ -213,8 +275,33 @@ func withArgumentsListen(traceContext *functionTraceContext, rawBytes chan []byt
 		// Determine what type it is for interpretation based on order of value coming in
 		dataTypeOfValue = traceContext.Arguments[index].goType
 
-		// If this argument is an array
-		if traceContext.Arguments[index].ArrayLength > 0 {
+		// If this argument is a slice
+		if traceContext.Arguments[index].IsSlice {
+			// First receive length
+			// then keep reading values
+			sliceLengthString := interpretDataByType(value, INT)
+			sliceLength, err := strconv.Atoi(sliceLengthString)
+			if err != nil {
+				log.Fatalf("could not interpret slice length, can't recover: %v\n", err)
+			}
+
+			var sliceValues string = "["
+
+			for i := 0; i < sliceLength; i++ {
+				value := <-rawBytes
+				valueString = interpretDataByType(value, dataTypeOfValue)
+
+				sliceValues += " " + valueString
+			}
+
+			sliceValues += " ]"
+
+			outputValue = outputArg{
+				Type:  goTypeToString[dataTypeOfValue] + "_SLICE",
+				Value: sliceValues,
+			}
+
+		} else if traceContext.Arguments[index].ArrayLength > 0 { // If this argument is an array
 
 			arrayValueString := interpretDataByType(value, dataTypeOfValue)
 

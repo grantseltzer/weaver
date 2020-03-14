@@ -22,7 +22,7 @@ func printOutput(o output) error {
 	if err != nil {
 		return fmt.Errorf("could not marshal output to JSON: %s", err.Error())
 	}
-	fmt.Fprintf(globalOutput, "%s", string(b))
+	fmt.Fprintf(globalOutput, "%s\n", string(b))
 	return nil
 }
 
