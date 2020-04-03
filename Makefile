@@ -32,9 +32,11 @@ bin/tester: cmd/tester
 # unit tests
 test:
 > go test -v ./cmd/weaver/...
+.PHONY: test
 
 smoke-test: tests/run_smoke_test.sh
 > sh -c "tests/run_smoke_test.sh"
+.PHONY: test
 
 clean:
 > rm -f ./bin/*
