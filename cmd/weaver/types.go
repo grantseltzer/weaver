@@ -30,6 +30,7 @@ type argument struct {
 	TypeSize       int
 	ArrayLength    int // Set as 0 if not array
 	IsSlice        bool
+	IsPointer      bool
 }
 
 type procInfo struct {
@@ -80,9 +81,9 @@ const (
 	STRING
 	BYTE
 	RUNE
+	POINTER
 	//TODO:
 	STRUCT
-	POINTER
 )
 
 var goTypeToSizeInBytes = map[goType]int{
@@ -102,9 +103,9 @@ var goTypeToSizeInBytes = map[goType]int{
 	BYTE:    1,
 	RUNE:    4,
 	STRING:  8,
-	//TODO:
-	STRUCT:  8,
 	POINTER: 8,
+	//TODO:
+	STRUCT: 8,
 }
 
 var goToCType = map[goType]string{
@@ -124,9 +125,9 @@ var goToCType = map[goType]string{
 	BYTE:    "char",
 	STRING:  "char *",
 	RUNE:    "int",
-	//TODO:
-	STRUCT:  "void *",
 	POINTER: "void *",
+	//TODO:
+	STRUCT: "void *",
 }
 
 func stringfFormat(t goType) string {
@@ -170,9 +171,9 @@ var stringToGoType = map[string]goType{
 	"STRING":  STRING,
 	"BYTE":    BYTE,
 	"RUNE":    RUNE,
-	//TODO:
-	"STRUCT":  STRUCT,
 	"POINTER": POINTER,
+	//TODO:
+	"STRUCT": STRUCT,
 }
 
 var goTypeToString = map[goType]string{
@@ -192,9 +193,9 @@ var goTypeToString = map[goType]string{
 	STRING:  "STRING",
 	BYTE:    "BYTE",
 	RUNE:    "RUNE",
-	//TODO:
-	STRUCT:  "STRUCT",
 	POINTER: "POINTER",
+	//TODO:
+	STRUCT: "STRUCT",
 }
 
 var supportedTypes = []string{
@@ -214,6 +215,7 @@ var supportedTypes = []string{
 	"STRING",
 	"BYTE",
 	"RUNE",
+	"POINTER",
 }
 
 func listAvailableTypes() {
@@ -270,7 +272,10 @@ func parseFunctionAndArgumentTypes(context *functionTraceContext, funcAndArgs st
 			var arg argument
 			argumentNumber += 1
 			arg.VariableName = fmt.Sprintf("argument%d", argumentNumber)
-			populateArgumentValues(parseStack, &arg)
+			err := populateArgumentValues(parseStack, &arg)
+			if err != nil {
+				return err
+			}
 			context.Arguments = append(context.Arguments, arg)
 
 			if funcAndArgs[i] == ',' {
@@ -310,6 +315,11 @@ func populateArgumentValues(parseStack *stack, arg *argument) error {
 			return err
 		}
 		arg.ArrayLength = length
+		arg.goType = goType
+		arg.PrintfFormat = stringfFormat(goType)
+		arg.CType = goToCType[goType]
+	} else if strings.HasPrefix(parseStack.string(), "*") {
+		goType := POINTER
 		arg.goType = goType
 		arg.PrintfFormat = stringfFormat(goType)
 		arg.CType = goToCType[goType]
