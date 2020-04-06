@@ -78,7 +78,6 @@ Output does include argument vlaues in this mode.
 
 Currently weaver supports basic data types but getting support for user defined types is a high priority. Getting following types defined are a work in progress:
 
-- arbitrary pointers
 - user/stdlib defined structs
 - user/stdlib defined interfaces
 
@@ -102,8 +101,7 @@ Short term goals include:
 
 - Testing
 - Output options
-- Deep pointer inspection
-- Inspecting binaries for parameter data types instead of specifying them at the command line
+- Inspecting binaries for parameter data types instead of specifying them with a functions file
 - CI/CD infrastructre 
 
 <i>image modified version of art by Ashley McNamara ([license](https://creativecommons.org/licenses/by-nc-sa/4.0/)) based on art by Renee French.</i>

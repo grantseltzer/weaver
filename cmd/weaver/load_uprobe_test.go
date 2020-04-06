@@ -124,9 +124,9 @@ func TestInterpretDataByType(t *testing.T) {
 		},
 		{
 			testname:       "pointer",
-			inputBytes:     []byte{},
+			inputBytes:     []byte{'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'},
 			inputType:      POINTER,
-			expectedOutput: "pointer interpretation is not yet implemented",
+			expectedOutput: "0x6161616161616161",
 		},
 	}
 
