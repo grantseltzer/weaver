@@ -389,11 +389,12 @@ func interpretDataByType(data []byte, gt goType) string {
 	case RUNE:
 		x1 := binary.LittleEndian.Uint32(data)
 		return fmt.Sprintf(stringfFormat(gt), int(x1))
+	case POINTER:
+		x1 := binary.LittleEndian.Uint64(data)
+		return fmt.Sprintf(stringfFormat(gt), int(x1))
 	//TODO:
 	case STRUCT:
 		return "struct interpretation is not yet implemented"
-	case POINTER:
-		return "pointer interpretation is not yet implemented"
 	}
 
 	return ""
