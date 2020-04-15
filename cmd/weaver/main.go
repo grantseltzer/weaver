@@ -121,6 +121,11 @@ func entry(c *cli.Context) error {
 		if binaryArg == "" {
 			return errors.New("must specify a binary argument")
 		}
+
+		_, err := os.Stat(binaryArg)
+		if err != nil {
+			return err
+		}
 	}
 
 	binaryFullPath, err := filepath.Abs(binaryArg)
