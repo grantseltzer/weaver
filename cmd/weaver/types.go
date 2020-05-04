@@ -154,28 +154,6 @@ func stringfFormat(t goType) string {
 	}
 }
 
-var stringToGoType = map[string]goType{
-	"INT":     INT,
-	"INT8":    INT8,
-	"INT16":   INT16,
-	"INT32":   INT32,
-	"INT64":   INT64,
-	"UINT":    UINT,
-	"UINT8":   UINT8,
-	"UINT16":  UINT16,
-	"UINT32":  UINT32,
-	"UINT64":  UINT64,
-	"FLOAT32": FLOAT32,
-	"FLOAT64": FLOAT64,
-	"BOOL":    BOOL,
-	"STRING":  STRING,
-	"BYTE":    BYTE,
-	"RUNE":    RUNE,
-	"POINTER": POINTER,
-	//TODO:
-	"STRUCT": STRUCT,
-}
-
 var goTypeToString = map[goType]string{
 	INT:     "INT",
 	INT8:    "INT8",
@@ -324,7 +302,7 @@ func populateArgumentValues(parseStack *stack, arg *argument) error {
 		arg.PrintfFormat = stringfFormat(goType)
 		arg.CType = goToCType[goType]
 	} else {
-		goType := stringToGoType[strings.ToUpper(parseStack.string())]
+		goType := stringToGoType(parseStack.string())
 		if goType == INVALID {
 			return fmt.Errorf("invalid go type: %s", parseStack.string())
 		}
@@ -353,7 +331,7 @@ func parseArrayString(s string) (int, goType, error) {
 
 	}
 
-	gotype := stringToGoType[strings.ToUpper(subs[1])]
+	gotype := stringToGoType(subs[1])
 	if gotype == INVALID {
 		return -1, INVALID, errors.New("malformed array type")
 	}
@@ -367,10 +345,44 @@ func parseSliceString(s string) (goType, error) {
 		return INVALID, errors.New("malformed array parameter")
 	}
 
-	goType := stringToGoType[strings.ToUpper(subs[1])]
+	goType := stringToGoType(subs[1])
 	if goType == INVALID {
 		return INVALID, errors.New("malformed slice type")
 	}
 
 	return goType, nil
+}
+
+func stringToGoType(typeString string) goType {
+
+	typeString = strings.ToUpper(typeString)
+
+	var stringToGoType = map[string]goType{
+		"INT":     INT,
+		"INT8":    INT8,
+		"INT16":   INT16,
+		"INT32":   INT32,
+		"INT64":   INT64,
+		"UINT":    UINT,
+		"UINT8":   UINT8,
+		"UINT16":  UINT16,
+		"UINT32":  UINT32,
+		"UINT64":  UINT64,
+		"FLOAT32": FLOAT32,
+		"FLOAT64": FLOAT64,
+		"BOOL":    BOOL,
+		"STRING":  STRING,
+		"BYTE":    BYTE,
+		"RUNE":    RUNE,
+		"POINTER": POINTER,
+		//TODO:
+		"STRUCT": STRUCT,
+	}
+
+	if strings.HasPrefix(typeString, "*") {
+		return POINTER
+	}
+
+	return stringToGoType[typeString]
+
 }
