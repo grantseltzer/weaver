@@ -1,16 +1,23 @@
+# BUILDER
 FROM fedora:31 as builder
-
-LABEL maintainer="grantseltzer@gmail.com"
 
 ENV PATH /go/bin:/usr/local/go/bin:$PATH
 ENV GOPATH /go
 
-RUN mkdir -p /go/src/github.com/grantseltzer
+WORKDIR /go/src/github.com/grantseltzer/weaver
 
-COPY . /go/src/github.com/grantseltzer/oster
+COPY . /go/src/github.com/grantseltzer/weaver
 
-# Install Dependencies
-RUN dnf install -y go bcc bcc-devel make
+RUN dnf install -y go bcc bcc-devel make && \
+     make && \
+     bash -c "./build-helper.sh /tmp/build-dir"
 
-# Mount /
-# privileged for now until making a seccomp profile
+
+FROM scratch  
+
+ENV LD_LIBRARY_PATH /lib64
+ENV PATH /bin
+COPY --from=builder /usr/bin/ldd /bin/ldd
+COPY --from=builder /tmp/build-dir/* /lib64
+COPY --from=builder /go/src/github.com/grantseltzer/weaver/bin/weaver /bin/weaver
+ENTRYPOINT ["/bin/weaver"]
