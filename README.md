@@ -84,7 +84,7 @@ Currently weaver supports basic data types but getting support for user defined 
 
 ## System Dependencies
 
-- [bcc](https://github.com/iovisor/bcc/blob/master/INSTALL.md)
+- [bcc](https://github.com/iovisor/bcc/blob/master/INSTALL.md) / bcc-devel
 - linux kernel version > 4.14 (please make bug reports if your kernel version doesn't work)
 
 ## Build
