@@ -1,11 +1,11 @@
 # Weaver
 
+<b>PLEASE READ!</b> - I am currently refactoring Weaver to use libbpf instead of bcc which would include various other major improvements. If you're currently using weaver please be aware that features/bug fixes are being held off until the major refactor occurs. This will be tracked in the branch "libbpf-refactor"
+
 <p align="center">
     <img src="DrManhattanGopher.png" alt="gopher" width="200"/>
 </p>
 
-
-<b>PLEASE READ!</b> - I am currently refactoring Weaver to use libbpf instead of bcc which would include various other major improvements. If you're currently using weaver please be aware that features/bug fixes are being held off until the major refactor occurs. This will be tracked in the branch "libbpf-refactor"
 
 Weaver is a CLI tool that allows you to trace Go programs in order to inspect what values are passed to specified functions. It leverages eBPF attached to uprobes.
 
