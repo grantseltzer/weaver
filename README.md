@@ -5,6 +5,8 @@
 </p>
 
 
+<b>PLEASE READ!</b> - I am currently refactoring Weaver to use libbpf instead of bcc which would include various other major improvements. If you're currently using weaver please be aware that features/bug fixes are being held off until the major refactor occurs.
+
 Weaver is a CLI tool that allows you to trace Go programs in order to inspect what values are passed to specified functions. It leverages eBPF attached to uprobes.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/grantseltzer/weaver)](https://goreportcard.com/report/github.com/grantseltzer/weaver)
