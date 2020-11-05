@@ -8,6 +8,9 @@ package main
 func test_single_byte(x byte) {}
 
 //go:noinline
+func test_a_different_single_byte(x byte) {}
+
+//go:noinline
 func test_single_rune(x rune) {}
 
 //go:noinline
@@ -149,6 +152,7 @@ func main() {
 	//TODO: Read the values to pass into these functions from a file
 
 	test_single_byte('a')
+	test_a_different_single_byte('b')
 	test_single_rune('a')
 	test_single_string("a")
 	test_single_bool(true)
