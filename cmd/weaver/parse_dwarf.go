@@ -46,7 +46,14 @@ func getDwarfData(path string) (*dwarf.Data, error) {
 func enrichTargets(targets []TraceTarget) error {
 	for i := range targets {
 		for n := range targets[i].Parameters {
-			err := enhanceParameter(&targets[i].Parameters[n])
+			err := enrichParameter(&targets[i].Parameters[n])
+			if err != nil {
+				return err
+			}
+		}
+
+		for m := range targets[i].Returns {
+			err := enrichParameter(&targets[i].Returns[m])
 			if err != nil {
 				return err
 			}
@@ -158,7 +165,7 @@ func entryIsNull(e *dwarf.Entry) bool {
 		e.Tag == dwarf.Tag(0)
 }
 
-func enhanceParameter(param *Parameter) error {
+func enrichParameter(param *Parameter) error {
 	if strings.Contains(param.TypeString, "[") {
 		size, gotype, err := parseArrayString(param.TypeString)
 		if err != nil {
