@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"context"
 	"errors"
@@ -180,3 +181,5 @@ func entry(c *cli.Context) error {
 
 	return nil
 }
+*/
+func main() {}

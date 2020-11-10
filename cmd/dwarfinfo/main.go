@@ -14,6 +14,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	syms, err := elfFile.Symbols()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(elfFile.Section(".symtab").Offset)
+	for _, sym := range syms {
+		fmt.Printf("Name: %s\tOffset: 0x%d\n", sym.Name, sym.Value)
+	}
+
 	dwarfData, err := elfFile.DWARF()
 	if err != nil {
 		log.Fatal(err)

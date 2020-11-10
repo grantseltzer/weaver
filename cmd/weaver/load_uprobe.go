@@ -1,20 +1,6 @@
 package main
 
-import (
-	"bytes"
-	"context"
-	"encoding/binary"
-	"fmt"
-	"log"
-	"math"
-	"strconv"
-	"strings"
-	"sync"
-	"text/template"
-
-	bpf "github.com/iovisor/gobpf/bcc"
-)
-
+/*
 const bpfWithArgsProgramTextTemplate = `
 	#include <uapi/linux/ptrace.h>
 	#include <linux/string.h>
@@ -30,7 +16,7 @@ const bpfWithArgsProgramTextTemplate = `
 	};
 
 	inline int print_symbol_arg(struct pt_regs *ctx) {
-		
+
 		// get process info
 		struct task_struct *task;
 		struct proc_info_t procInfo = {};
@@ -85,7 +71,7 @@ const bpfWithArgsProgramTextTemplate = `
 						}
 
 						{{if ne $arg_element.CType "char *" }}
-		
+
 							// [TEMPLATE] Not a slice of strings
 							{{$arg_element.CType}} {{$arg_element.VariableName}};
 							bpf_probe_read(&{{$arg_element.VariableName}},  sizeof({{$arg_element.VariableName}}), (void*){{$arg_element.VariableName}}_starting_addr);
@@ -102,13 +88,13 @@ const bpfWithArgsProgramTextTemplate = `
 							}
 
 							unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
-							
+
 							// use long double to have up to a 16 character string by reading in the raw bytes
 							long double* {{$arg_element.VariableName}}_ptr;
 							long double  {{$arg_element.VariableName}};
 							bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), (void*){{$arg_element.VariableName}}_starting_addr);
 							bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
-						
+
 							events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
 							{{$arg_element.VariableName}}_starting_addr += 16;
 
@@ -116,22 +102,22 @@ const bpfWithArgsProgramTextTemplate = `
 
 					}
 
-				
+
 				{{else if gt $arg_element.ArrayLength 0}}
 				// [TEMPLATE] It's not a slice, but this argument is an array
 
 					unsigned int i_{{$arg_element.VariableName}};
 					void* loopAddr_{{$arg_element.VariableName}} = stackAddr+{{$arg_element.StartingOffset}};
 					for (i_{{$arg_element.VariableName}} = 0; i_{{$arg_element.VariableName}} < {{$arg_element.ArrayLength}}; i_{{$arg_element.VariableName}}++) {
-						
+
 						// [TEMPLATE] This is NOT an array of strings
 						{{if ne $arg_element.CType "char *" }}
 
 							{{$arg_element.CType}} {{$arg_element.VariableName}};
-							bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), loopAddr_{{$arg_element.VariableName}}); 
+							bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), loopAddr_{{$arg_element.VariableName}});
 							events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
 							loopAddr_{{$arg_element.VariableName}} += {{$arg_element.TypeSize}};
-						
+
 						// [TEMPLATE] This is an array of strings
 						{{else}}
 
@@ -141,13 +127,13 @@ const bpfWithArgsProgramTextTemplate = `
 								{{$arg_element.VariableName}}_length = 16;
 							}
 							unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
-							
+
 							// use long double to have up to a 16 character string by reading in the raw bytes
 							long double* {{$arg_element.VariableName}}_ptr;
 							long double  {{$arg_element.VariableName}};
 							bpf_probe_read(&{{$arg_element.VariableName}}_ptr, sizeof({{$arg_element.VariableName}}_ptr), loopAddr_{{$arg_element.VariableName}});
 							bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), {{$arg_element.VariableName}}_ptr);
-						
+
 							events.perf_submit(ctx, &{{$arg_element.VariableName}}, str_length);
 							loopAddr_{{$arg_element.VariableName}} += 16;
 						{{end}}
@@ -155,14 +141,14 @@ const bpfWithArgsProgramTextTemplate = `
 
 				// [TEMPLATE] If it's not array, but it's a string
 				{{else if eq $arg_element.CType "char *" }}
-				
+
 					unsigned long {{$arg_element.VariableName}}_length;
 					bpf_probe_read(&{{$arg_element.VariableName}}_length, sizeof({{$arg_element.VariableName}}_length), stackAddr+{{$arg_element.StartingOffset}}+8);
 					if ({{$arg_element.VariableName}}_length > 16 ) {
 						{{$arg_element.VariableName}}_length = 16;
 					}
 					unsigned int str_length = (unsigned int){{$arg_element.VariableName}}_length;
-					
+
 					// use long double to have up to a 16 character string by reading in the raw bytes
 					long double* {{$arg_element.VariableName}}_ptr;
 					long double  {{$arg_element.VariableName}};
@@ -174,11 +160,11 @@ const bpfWithArgsProgramTextTemplate = `
 				{{- else }}
 
 					{{$arg_element.CType}} {{$arg_element.VariableName}};
-					bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), stackAddr+{{$arg_element.StartingOffset}}); 
+					bpf_probe_read(&{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}), stackAddr+{{$arg_element.StartingOffset}});
 					events.perf_submit(ctx, &{{$arg_element.VariableName}}, sizeof({{$arg_element.VariableName}}));
-				
+
 				{{- end}}
-			
+
 			{{end}}
 		{{end}}
 		return 0;
@@ -399,3 +385,4 @@ func interpretDataByType(data []byte, gt goType) string {
 
 	return ""
 }
+*/
