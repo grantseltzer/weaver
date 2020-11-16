@@ -13,6 +13,7 @@ import (
 // TraceTarget represents a function/method to attach a uprobe+ebpf to
 type TraceTarget struct {
 	Name       string
+	Offset     uint64
 	Parameters []Parameter
 	Returns    []Parameter
 }
@@ -29,40 +30,143 @@ type Parameter struct {
 	ArrayLength  int // 0 if not an array
 }
 
-func getDwarfData(path string) (*dwarf.Data, error) {
+type TraceFilter struct {
+	packages []string
+}
+
+func GetTargets(path string, filter TraceFilter) ([]*TraceTarget, error) {
+
 	elfFile, err := elf.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	dwarfData, err := elfFile.DWARF()
+	data, err := elfFile.DWARF()
 	if err != nil {
 		return nil, err
 	}
 
-	return dwarfData, nil
+	targets, err := parseDwarfData(data)
+	if err != nil {
+		return nil, err
+	}
+
+	targets, err = filterTargets(targets, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	err = enrichTargets(elfFile, targets)
+	if err != nil {
+		return nil, err
+	}
+
+	return targets, nil
 }
 
-func enrichTargets(targets []TraceTarget) error {
+func filterTargets(targets []*TraceTarget, filterSpec TraceFilter) ([]*TraceTarget, error) {
+
+	filterApplied := false
+	filteredTargets := []*TraceTarget{}
+
+	// Filter by package
+	if len(filterSpec.packages) > 0 {
+		packageMap := map[string]bool{}
+		for i := range filterSpec.packages {
+			packageMap[filterSpec.packages[i]] = true
+		}
+
+		for i := range targets {
+			targetsPackage := strings.Split(targets[i].Name, ".")
+			if packageMap[targetsPackage[0]] {
+				filteredTargets = append(filteredTargets, targets[i])
+			}
+		}
+		filterApplied = true
+	}
+
+	if filterApplied {
+		return filteredTargets, nil
+	}
+
+	return targets, nil
+}
+
+func enrichTargets(f *elf.File, targets []*TraceTarget) error {
+
 	for i := range targets {
 		for n := range targets[i].Parameters {
-			err := enrichParameter(&targets[i].Parameters[n])
+			err := getGoType(&targets[i].Parameters[n])
 			if err != nil {
 				return err
 			}
 		}
 
 		for m := range targets[i].Returns {
-			err := enrichParameter(&targets[i].Returns[m])
+			err := getGoType(&targets[i].Returns[m])
 			if err != nil {
 				return err
 			}
 		}
 
-		err := getStackOffsets(&targets[i])
+		err := getParameterStackOffsets(targets[i])
 		if err != nil {
 			return err
 		}
+
+	}
+
+	err := getTargetsOffset(f, targets[i])
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func getBaseAddr(f *elf.File) (uint64, error) {
+	foundTextSection := false
+	var baseAddr uint64
+	for i := range f.Progs {
+		if f.Progs[i].Type == elf.PT_LOAD &&
+			f.Progs[i].Flags == elf.PF_R+elf.PF_X {
+			baseAddr = f.Progs[i].Align
+			foundTextSection = true
+		}
+	}
+
+	if !foundTextSection {
+		return 0, errors.New("could not find text section")
+	}
+
+	return baseAddr, nil
+}
+
+func getTargetsOffset(f *elf.File, targets []*TraceTarget) error {
+
+	baseAddr, err := getBaseAddr(f) // calculate base addr once for calculating target offsets
+	if err != nil {
+		return err
+	}
+
+	symbolsToOffsets := map[string]uint64{}
+
+	allSymbols, err := f.Symbols()
+	if err != nil {
+		return err
+	}
+
+	for i := range allSymbols {
+		symbolsToOffsets[allSymbols[i].Name] = symbolsToOffsets[allSymbols[i].Name]
+	}
+
+	var offset uint64
+	for i := range targets {
+		offset = symbolsToOffsets[targets[i].Name]
+		if offset == 0 {
+			return errors.New("couldn't find offset")
+		}
+
+		targets[i].Offset = offset - baseAddr
 	}
 
 	return nil
@@ -70,12 +174,12 @@ func enrichTargets(targets []TraceTarget) error {
 
 // parseDwarfData takes DWARF data and returns a slice
 // of TraceTargets for weaver to attach uprobes/ebpf to.
-func parseDwarfData(data *dwarf.Data) ([]TraceTarget, error) {
+func parseDwarfData(data *dwarf.Data) ([]*TraceTarget, error) {
 
 	linearReader := data.Reader()
 	typeReader := data.Reader()
 
-	var targets []TraceTarget
+	var targets []*TraceTarget
 
 	var targetBeingRead *TraceTarget = nil
 
@@ -86,7 +190,7 @@ entryReadLoop:
 			break entryReadLoop
 		}
 		if err != nil {
-			return []TraceTarget{}, err
+			return nil, err
 		}
 
 		if targetBeingRead != nil {
@@ -94,7 +198,7 @@ entryReadLoop:
 
 			// Null entry is used to end function's list of parameters/variables
 			if entryIsNull(entry) {
-				targets = append(targets, *targetBeingRead)
+				targets = append(targets, targetBeingRead)
 				targetBeingRead = nil
 				continue entryReadLoop
 			}
@@ -124,7 +228,7 @@ entryReadLoop:
 					typeReader.Seek(entry.Field[i].Val.(dwarf.Offset))
 					typeEntry, err := typeReader.Next()
 					if err != nil {
-						return []TraceTarget{}, err
+						return nil, err
 					}
 
 					for i := range typeEntry.Field {
@@ -165,7 +269,7 @@ func entryIsNull(e *dwarf.Entry) bool {
 		e.Tag == dwarf.Tag(0)
 }
 
-func enrichParameter(param *Parameter) error {
+func getGoType(param *Parameter) error {
 	if strings.Contains(param.TypeString, "[") {
 		size, gotype, err := parseArrayString(param.TypeString)
 		if err != nil {
@@ -191,7 +295,7 @@ func enrichParameter(param *Parameter) error {
 // - Look at size of largest data type that's being passed, that sets the window size
 // - Each element added is limited by whether or not it will fit into that window
 // - If it would go over a limit window then pad until back at 0, add it, then continue
-func getStackOffsets(target *TraceTarget) error {
+func getParameterStackOffsets(target *TraceTarget) error {
 
 	var windowSize = 0
 
@@ -236,6 +340,21 @@ func getStackOffsets(target *TraceTarget) error {
 		}
 	}
 	return nil
+}
+
+func textSegmentAlignment(path string) (uint64, error) {
+	f, err := elf.Open(path)
+	if err != nil {
+		return 0, err
+	}
+
+	for i := range f.Progs {
+		if f.Progs[i].Type == elf.PT_LOAD &&
+			f.Progs[i].Flags == (elf.PF_R+elf.PF_X) {
+			return f.Progs[i].Align, nil
+		}
+	}
+	return 0, errors.New("could not find loadable text segment")
 }
 
 type goType int
@@ -332,66 +451,66 @@ func stringfFormat(t goType) string {
 }
 
 var stringToGoType = map[string]goType{
-	"INT":     INT,
-	"INT8":    INT8,
-	"INT16":   INT16,
-	"INT32":   INT32,
-	"INT64":   INT64,
-	"UINT":    UINT,
-	"UINT8":   UINT8,
-	"UINT16":  UINT16,
-	"UINT32":  UINT32,
-	"UINT64":  UINT64,
-	"FLOAT32": FLOAT32,
-	"FLOAT64": FLOAT64,
-	"BOOL":    BOOL,
-	"STRING":  STRING,
-	"BYTE":    BYTE,
-	"RUNE":    RUNE,
+	"int":     INT,
+	"int8":    INT8,
+	"int16":   INT16,
+	"int32":   INT32,
+	"int64":   INT64,
+	"uint":    UINT,
+	"uint8":   UINT8,
+	"uint16":  UINT16,
+	"uint32":  UINT32,
+	"uint64":  UINT64,
+	"float32": FLOAT32,
+	"float64": FLOAT64,
+	"bool":    BOOL,
+	"string":  STRING,
+	"byte":    BYTE,
+	"rune":    RUNE,
 	//TODO:
-	"STRUCT":  STRUCT,
-	"POINTER": POINTER,
+	"struct":  STRUCT,
+	"pointer": POINTER,
 }
 
 var goTypeToString = map[goType]string{
-	INT:     "INT",
-	INT8:    "INT8",
-	INT16:   "INT16",
-	INT32:   "INT32",
-	INT64:   "INT64",
-	UINT:    "UINT",
-	UINT8:   "UINT8",
-	UINT16:  "UINT16",
-	UINT32:  "UINT32",
-	UINT64:  "UINT64",
-	FLOAT32: "FLOAT32",
-	FLOAT64: "FLOAT64",
-	BOOL:    "BOOL",
-	STRING:  "STRING",
-	BYTE:    "BYTE",
-	RUNE:    "RUNE",
+	INT:     "int",
+	INT8:    "int8",
+	INT16:   "int16",
+	INT32:   "int32",
+	INT64:   "int64",
+	UINT:    "uint",
+	UINT8:   "uint8",
+	UINT16:  "uint16",
+	UINT32:  "uint32",
+	UINT64:  "uint64",
+	FLOAT32: "float32",
+	FLOAT64: "float64",
+	BOOL:    "bool",
+	STRING:  "string",
+	BYTE:    "byte",
+	RUNE:    "rune",
 	//TODO:
-	STRUCT:  "STRUCT",
-	POINTER: "POINTER",
+	STRUCT:  "struct",
+	POINTER: "pointer",
 }
 
 var supportedTypes = []string{
-	"INT",
-	"INT8",
-	"INT16",
-	"INT32",
-	"INT64",
-	"UINT",
-	"UINT8",
-	"UINT16",
-	"UINT32",
-	"UINT64",
-	"FLOAT32",
-	"FLOAT64",
-	"BOOL",
-	"STRING",
-	"BYTE",
-	"RUNE",
+	"int",
+	"int8",
+	"int16",
+	"int32",
+	"int64",
+	"uint",
+	"uint8",
+	"uint16",
+	"uint32",
+	"uint64",
+	"float32",
+	"float64",
+	"bool",
+	"string",
+	"byte",
+	"rune",
 }
 
 func parseArrayString(s string) (int, goType, error) {
@@ -411,7 +530,7 @@ func parseArrayString(s string) (int, goType, error) {
 
 	}
 
-	gotype := stringToGoType[strings.ToUpper(subs[1])]
+	gotype := stringToGoType[subs[1]]
 	if gotype == INVALID {
 		return -1, INVALID, errors.New("malformed array type")
 	}
