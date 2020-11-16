@@ -116,7 +116,7 @@ func enrichTargets(f *elf.File, targets []*TraceTarget) error {
 
 	}
 
-	err := getTargetsOffset(f, targets[i])
+	err := getTargetsOffset(f, targets)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func getBaseAddr(f *elf.File) (uint64, error) {
 	for i := range f.Progs {
 		if f.Progs[i].Type == elf.PT_LOAD &&
 			f.Progs[i].Flags == elf.PF_R+elf.PF_X {
-			baseAddr = f.Progs[i].Align
+			baseAddr = f.Progs[i].Paddr
 			foundTextSection = true
 		}
 	}
@@ -156,7 +156,7 @@ func getTargetsOffset(f *elf.File, targets []*TraceTarget) error {
 	}
 
 	for i := range allSymbols {
-		symbolsToOffsets[allSymbols[i].Name] = symbolsToOffsets[allSymbols[i].Name]
+		symbolsToOffsets[allSymbols[i].Name] = allSymbols[i].Value - baseAddr
 	}
 
 	var offset uint64
@@ -165,8 +165,7 @@ func getTargetsOffset(f *elf.File, targets []*TraceTarget) error {
 		if offset == 0 {
 			return errors.New("couldn't find offset")
 		}
-
-		targets[i].Offset = offset - baseAddr
+		targets[i].Offset = offset
 	}
 
 	return nil
@@ -271,11 +270,11 @@ func entryIsNull(e *dwarf.Entry) bool {
 
 func getGoType(param *Parameter) error {
 	if strings.Contains(param.TypeString, "[") {
-		size, gotype, err := parseArrayString(param.TypeString)
+		length, gotype, err := parseArrayString(param.TypeString)
 		if err != nil {
 			return err
 		}
-		param.TypeSize = size
+		param.ArrayLength = length
 		param.GoType = gotype
 	} else {
 		goType := stringToGoType[param.TypeString]
@@ -284,9 +283,8 @@ func getGoType(param *Parameter) error {
 		}
 		param.GoType = goType
 	}
-
 	param.CType = goToCType[param.GoType]
-
+	param.PrintfFormat = stringfFormat(param.GoType)
 	return nil
 }
 
