@@ -29,30 +29,14 @@ SEC("uprobe/weaver")
 int uprobe__weaver(struct pt_regs *ctx)
 {
 	u64 id = bpf_get_current_pid_tgid();
-	u32 tgid = id >> 32;
-	struct parameter *parameter;
-
+	u64 *idptr;
     // Reserve space on the ringbuffer for the sample
-	parameter = bpf_ringbuf_reserve(&output, sizeof(struct parameter), ringbuffer_flags);
-	if (!parameter) {
+	idptr = bpf_ringbuf_reserve(&output, sizeof(id, ringbuffer_flags);
+	if (!idptr) {
 		return 0;
     }
-
-	void* stackAddr = (void*)ctx->sp;
 	
-	int idx;
-	for (idx = 0; idx < 6; idx++) {
-		struct parameter* param = (struct parameter*)bpf_map_lookup_elem(&parameters, (u32)idx);
-		if (!parameter) {
-			return 1;
-		}
+	bpf_ringbuf_submit(idptr, ringbuffer_flags);
 
-		u8 bytes[param->size];
-		bpf_probe_read(bytes, param->size, param->start_offset);
-		parameter->result = bytes;
-		parameter->pid = tgid;
-		bpf_ringbuf_submit(parameter, ringbuffer_flags);
-	}
-	
 	return 0;
 }

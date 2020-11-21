@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 )
@@ -66,44 +63,48 @@ func main() {
 
 func entry(c *cli.Context) error {
 
-	// Turn on debug logigng
-	if c.Bool("debug") {
-		globalDebug = true
+	// // Turn on debug logigng
+	// if c.Bool("debug") {
+	// 	globalDebug = true
+	// }
+
+	// // Turn on logging of eBPF programs
+	// if c.Bool("debug-ebpf") {
+	// 	globalDebugeBPF = true
+	// }
+
+	// path := c.Args().Get(0)
+	// if path == "" {
+	// 	return errors.New("must specify a binary argument")
+	// }
+
+	// _, err := os.Stat(path)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// binaryFullPath, err := filepath.Abs(path)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// packagesToTrace := c.StringSlice("packages")
+
+	// filters := TraceFilter{
+	// 	packages: packagesToTrace,
+	// }
+
+	// traceTargets, err := GetTargets(binaryFullPath, filters)
+	// if err != nil {
+	// 	return err
+	// }
+
+	tgt := TraceTarget{
+		Name:   "main.test_single_byte",
+		Offset: 0x5da40,
 	}
 
-	// Turn on logging of eBPF programs
-	if c.Bool("debug-ebpf") {
-		globalDebugeBPF = true
-	}
-
-	path := c.Args().Get(0)
-	if path == "" {
-		return errors.New("must specify a binary argument")
-	}
-
-	_, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	binaryFullPath, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-
-	packagesToTrace := c.StringSlice("packages")
-
-	filters := TraceFilter{
-		packages: packagesToTrace,
-	}
-
-	traceTargets, err := GetTargets(binaryFullPath, filters)
-	if err != nil {
-		return err
-	}
-
-	s, _ := json.Marshal(traceTargets)
-	fmt.Printf("%s", s)
+	fmt.Println(load(tgt))
 
 	return nil
 }
