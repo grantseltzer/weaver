@@ -1,59 +1,56 @@
-GOENV = GOOS=linux GOARCH=amd64
-MOD= -mod=vendor
 SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
 .DELETE_ON_ERROR:
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
+LIBBPF_SRC := $(abspath ./tp_src/cc/libbpf/src)
 
 ifeq ($(origin .RECIPEPREFIX), undefined)
   $(error This Make does not support .RECIPEPREFIX. Please use GNU Make 4.0 or later)
 endif
 .RECIPEPREFIX = >
 
-default: bin/weaver bin/dwarfinfo bin/print-stack bin/tester
+.PHONY:
+default: src/vmlinux.h .output/libbpf.a install-headers bpf-object gen-skeleton compile-helpers finish
 
-bin/weaver: cmd/weaver
-> mkdir -p ./bin
-> $(GOENV) go build $(MOD) -o ./bin/weaver ./cmd/weaver/...
-.PHONY: bin/weaver
+.PHONY: src/vmlinux.h
+src/vmlinux.h:
+> bin/bpftool btf dump file /sys/kernel/btf/vmlinux format c > src/vmlinux.h
 
-bin/dwarfinfo: cmd/dwarfinfo
-> mkdir -p ./bin
-> $(GOENV) go build $(MOD) -o ./bin/dwarfinfo ./cmd/dwarfinfo/...
-.PHONY: bin/dwarfinfo
+.PHONY: .output/libbpf.a
+.output/libbpf.a:
+> mkdir -p src/.output/libbpf/staticobjs
+> $(MAKE) -C $(LIBBPF_SRC) BUILD_STATIC_ONLY=1            \
+		    OBJDIR=$(dir $@)/libbpf DESTDIR=$(dir $@)	  \
+		    INCLUDEDIR= LIBDIR= UAPIDIR=				  \
+		    install
+> ar rcs $(abspath ./src/.output/libbpf.a) $(LIBBPF_SRC)/.output/libbpf/staticobjs/*.o
 
-bin/print-stack: cmd/print-stack
-> mkdir -p ./bin
-> $(GOENV) go build $(MOD) -o ./bin/print-stack ./cmd/print-stack/...
-.PHONY: bin/print-stack
+.PHONY: install-headers
+install-headers:
+> install $(LIBBPF_SRC)/*.h -m 644 ./src/.output
 
-bin/tester: cmd/tester
-> mkdir -p ./bin
-> $(GOENV) go build $(MOD) -o ./bin/tester ./cmd/tester/...
-.PHONY: bin/tester
+.PHONY: bpf-object
+bpf-object:
+> clang -g -O2 -target bpf -D__TARGET_ARCH_x86 -Isrc/.output -c src/weaver.bpf.c -o src/.output/weaver.bpf.o
 
-# unit tests
-test:
-> go test -v ./cmd/weaver/...
-.PHONY: test
+.PHONY: gen-skeleton
+gen-skeleton:
+> bin/bpftool gen skeleton src/.output/weaver.bpf.o > src/.output/weaver.skel.h
 
-smoke-test: tests/run_smoke_test.sh
-> sh -c "tests/run_smoke_test.sh"
-.PHONY: test
+.PHONY: compile-helpers
+compile-helpers:
+> gcc -g -O2 -Wall -Isrc/.output -c src/trace_helpers.c -o src/.output/trace_helpers.o
+> gcc -g -O2 -Wall -Isrc/.output -c src/syscall_helpers.c -o src/.output/syscall_helpers.o
+> gcc -g -O2 -Wall -Isrc/.output -c src/errno_helpers.c -o src/.output/errno_helpers.o
+> gcc -g -O2 -Wall -Isrc/.output -c src/map_helpers.c -o src/.output/map_helpers.o
+> go tool compile -I src/.output ./cmd/weaver/*.go -o src/.output/weaver.o
 
+.PHONY: finish
+finish:
+> gcc -g -O2 -Wall src/.output/weaver.o src/.output/libbpf.a src/.output/trace_helpers.o src/.output/syscall_helpers.o src/.output/errno_helpers.o src/.output/map_helpers.o -lelf -lz -o bin/weaver
+
+.PHONY: clean
 clean:
-> rm -f ./bin/*
-.PHONY: clean
-
-.PHONY: clean
-help:
-> @echo  "Targets:"
-> @echo  "    default - bin/*"
-> @echo  "    test - run unit tests"
-> @echo  "    smoke-test - (REQUIRES ROOT) run smoke tester"
-> @echo  "    bin/weaver - build weaver cli to ./bin/weaver"
-> @echo  "    bin/tester - build tester program used in test target to ./bin/tester"
-> @echo  "    bin/print-stack - build print-stack cli which traces a particular function by printing the first 25 bytes the stack on function enter to ./bin/print-stack"
-> @echo  "    clean - clear out bin"
+> rm -rf src/.output

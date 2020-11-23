@@ -31,7 +31,7 @@ int uprobe__weaver(struct pt_regs *ctx)
 	u64 id = bpf_get_current_pid_tgid();
 	u64 *idptr;
     // Reserve space on the ringbuffer for the sample
-	idptr = bpf_ringbuf_reserve(&output, sizeof(id, ringbuffer_flags);
+	idptr = bpf_ringbuf_reserve(&output, sizeof(id, ringbuffer_flags), ringbuffer_flags);
 	if (!idptr) {
 		return 0;
     }

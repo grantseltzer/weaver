@@ -3,7 +3,7 @@ struct parameter {
     char* func_name;
     u32 start_offset;
     u32 size;
-    long data
+    long data;
 };
 
 struct result {};

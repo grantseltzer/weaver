@@ -1,6 +1,8 @@
 package main
 
 /*
+#cgo LDFLAGS: -lelf -lz
+
 #include "weaver.skel.h"
 #include "weaver.h"
 #include "trace_helpers.h"
