@@ -1,2 +1,3 @@
+src/.output/*
 bin
 cmd/method-test
