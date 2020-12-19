@@ -26,6 +26,7 @@ type Parameter struct {
 	CType        string
 	StartOffset  int
 	PrintfFormat string
+	IsPointer    bool
 	TypeSize     int
 	ArrayLength  int // 0 if not an array
 }
@@ -98,14 +99,14 @@ func enrichTargets(f *elf.File, targets []*TraceTarget) error {
 		for n := range targets[i].Parameters {
 			err := getGoType(&targets[i].Parameters[n])
 			if err != nil {
-				return err
+				continue
 			}
 		}
 
 		for m := range targets[i].Returns {
 			err := getGoType(&targets[i].Returns[m])
 			if err != nil {
-				return err
+				continue
 			}
 		}
 
@@ -163,7 +164,7 @@ func getTargetsOffset(f *elf.File, targets []*TraceTarget) error {
 	for i := range targets {
 		offset = symbolsToOffsets[targets[i].Name]
 		if offset == 0 {
-			return errors.New("couldn't find offset")
+			return fmt.Errorf("couldn't find offset for %s", targets[i].Name)
 		}
 		targets[i].Offset = offset
 	}
@@ -269,22 +270,12 @@ func entryIsNull(e *dwarf.Entry) bool {
 }
 
 func getGoType(param *Parameter) error {
-	if strings.Contains(param.TypeString, "[") {
-		length, gotype, err := parseArrayString(param.TypeString)
-		if err != nil {
-			return err
-		}
-		param.ArrayLength = length
-		param.GoType = gotype
-	} else {
-		goType := stringToGoType[param.TypeString]
-		if goType == INVALID {
-			return fmt.Errorf("invalid go type: %s", param.TypeString)
-		}
-		param.GoType = goType
-	}
-	param.CType = goToCType[param.GoType]
-	param.PrintfFormat = stringfFormat(param.GoType)
+
+	//TODO:
+
+	// already filled out: param.TypeString
+	// can be things like 'string', '*string', '[]string', '[]*string', '*[]string', 'mystruct', '*mystruct', '[]mystruct', '[]*mystruct', '*[]mystruct', 'myinterface'....
+
 	return nil
 }
 
