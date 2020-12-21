@@ -28,6 +28,7 @@ type Parameter struct {
 	PrintfFormat string
 	IsPointer    bool
 	TypeSize     int
+	IsSlice      bool
 	ArrayLength  int // 0 if not an array
 }
 
@@ -96,6 +97,13 @@ func filterTargets(targets []*TraceTarget, filterSpec TraceFilter) ([]*TraceTarg
 func enrichTargets(f *elf.File, targets []*TraceTarget) error {
 
 	for i := range targets {
+
+		// Enrich parameters
+		err := getParameterStackOffsets(targets[i])
+		if err != nil {
+			return err
+		}
+
 		for n := range targets[i].Parameters {
 			err := getGoType(&targets[i].Parameters[n])
 			if err != nil {
@@ -103,18 +111,13 @@ func enrichTargets(f *elf.File, targets []*TraceTarget) error {
 			}
 		}
 
+		// Enrich returns
 		for m := range targets[i].Returns {
 			err := getGoType(&targets[i].Returns[m])
 			if err != nil {
 				continue
 			}
 		}
-
-		err := getParameterStackOffsets(targets[i])
-		if err != nil {
-			return err
-		}
-
 	}
 
 	err := getTargetsOffset(f, targets)
@@ -271,10 +274,31 @@ func entryIsNull(e *dwarf.Entry) bool {
 
 func getGoType(param *Parameter) error {
 
-	//TODO:
+	// Check if is pointer
+	if strings.HasPrefix(param.TypeString, "*") {
+		param.IsPointer = true
+		param.PrintfFormat = stringfFormat(POINTER)
+		param.GoType = stringToGoType[param.TypeString[1:]] // Can be INVALID, but this is fine, pointers just print addrs
+	} else if strings.HasPrefix(param.TypeString, "[]") { //  slice
+		goType, err := parseSliceString(param.TypeString)
+		if err != nil {
+			return err
+		}
+		param.GoType = goType
+		param.PrintfFormat = stringfFormat(goType)
+		param.IsSlice = true
+	} else if strings.HasPrefix(param.TypeString, "[") { // array
+		arrayLen, goType, err := parseArrayString(param.TypeString)
+		if err != nil {
+			return err
+		}
+		param.ArrayLength = arrayLen
+		param.GoType = goType
+	}
 
 	// already filled out: param.TypeString
 	// can be things like 'string', '*string', '[]string', '[]*string', '*[]string', 'mystruct', '*mystruct', '[]mystruct', '[]*mystruct', '*[]mystruct', 'myinterface'....
+	// Populate param.GoType param.IsPointer param.PrintfFormat param.ArrayLength
 
 	return nil
 }
@@ -500,6 +524,20 @@ var supportedTypes = []string{
 	"string",
 	"byte",
 	"rune",
+}
+
+func parseSliceString(s string) (goType, error) {
+	subs := strings.Split(s, "]")
+	if len(subs) != 2 && subs[0] != "[" {
+		return INVALID, errors.New("malformed slice parameter")
+	}
+
+	goType := stringToGoType[subs[1]]
+	if goType == INVALID {
+		return INVALID, errors.New("malformed slice type")
+	}
+
+	return goType, nil
 }
 
 func parseArrayString(s string) (int, goType, error) {
