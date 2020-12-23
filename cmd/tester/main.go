@@ -5,6 +5,9 @@ package main
 /********************/
 
 //go:noinline
+func test_single_slice(x []byte) {}
+
+//go:noinline
 func test_single_byte(x byte) {}
 
 //go:noinline
@@ -147,11 +150,21 @@ func test_uint32_array(x [2]uint32) {}
 //go:noinline
 func test_uint64_array(x [2]uint64) {}
 
+//go:noinline
+func test_single_pointer(x *byte) {}
+
+//go:noinline
+func test_pointer_array(x [2]*int) {}
+
+//go:noinline
+func test_array_pointer(x *[2]int) {}
+
 func main() {
 
 	//TODO: Read the values to pass into these functions from a file
 
 	test_single_byte('a')
+	test_single_slice([]byte{'a', 'b', 'c'})
 	test_a_different_single_byte('b')
 	test_single_rune('a')
 	test_single_string("a")
@@ -196,4 +209,14 @@ func main() {
 	test_uint16_array([2]uint16{951, 123})
 	test_uint32_array([2]uint32{5135, 512321})
 	test_uint64_array([2]uint64{412412456, 1234134})
+
+	var x byte = 'a'
+	test_single_pointer(&x)
+
+	var y int = 4
+	test_pointer_array([2]*int{&y, &y})
+
+	var z [2]int
+	test_array_pointer(&z)
+
 }

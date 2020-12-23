@@ -28,7 +28,6 @@ type Parameter struct {
 	PrintfFormat string
 	IsPointer    bool
 	TypeSize     int
-	IsSlice      bool
 	ArrayLength  int // 0 if not an array
 }
 
@@ -98,14 +97,8 @@ func enrichTargets(f *elf.File, targets []*TraceTarget) error {
 
 	for i := range targets {
 
-		// Enrich parameters
-		err := getParameterStackOffsets(targets[i])
-		if err != nil {
-			return err
-		}
-
 		for n := range targets[i].Parameters {
-			err := getGoType(&targets[i].Parameters[n])
+			err := parseTypeString(&targets[i].Parameters[n])
 			if err != nil {
 				continue
 			}
@@ -113,10 +106,16 @@ func enrichTargets(f *elf.File, targets []*TraceTarget) error {
 
 		// Enrich returns
 		for m := range targets[i].Returns {
-			err := getGoType(&targets[i].Returns[m])
+			err := parseTypeString(&targets[i].Returns[m])
 			if err != nil {
 				continue
 			}
+		}
+
+		// Enrich parameters
+		err := getParameterStackOffsets(targets[i])
+		if err != nil {
+			return err
 		}
 	}
 
@@ -272,34 +271,34 @@ func entryIsNull(e *dwarf.Entry) bool {
 		e.Tag == dwarf.Tag(0)
 }
 
-func getGoType(param *Parameter) error {
-
-	// Check if is pointer
-	if strings.HasPrefix(param.TypeString, "*") {
-		param.IsPointer = true
-		param.PrintfFormat = stringfFormat(POINTER)
-		param.GoType = stringToGoType[param.TypeString[1:]] // Can be INVALID, but this is fine, pointers just print addrs
-	} else if strings.HasPrefix(param.TypeString, "[]") { //  slice
-		goType, err := parseSliceString(param.TypeString)
-		if err != nil {
-			return err
-		}
-		param.GoType = goType
-		param.PrintfFormat = stringfFormat(goType)
-		param.IsSlice = true
-	} else if strings.HasPrefix(param.TypeString, "[") { // array
-		arrayLen, goType, err := parseArrayString(param.TypeString)
-		if err != nil {
-			return err
-		}
-		param.ArrayLength = arrayLen
-		param.GoType = goType
-	}
+func parseTypeString(param *Parameter) error {
 
 	// already filled out: param.TypeString
 	// can be things like 'string', '*string', '[]string', '[]*string', '*[]string', 'mystruct', '*mystruct', '[]mystruct', '[]*mystruct', '*[]mystruct', 'myinterface'....
 	// Populate param.GoType param.IsPointer param.PrintfFormat param.ArrayLength
 
+	if strings.HasPrefix(param.TypeString, "[]") {
+		param.GoType = SLICE
+	} else if strings.HasPrefix(param.TypeString, "[") {
+		arraySplit := strings.Split(param.TypeString, "]")
+		arrayGoType := stringToGoType[arraySplit[1]]
+		if arrayGoType == INVALID {
+			arrayGoType = POINTER
+		}
+		param.GoType = arrayGoType
+	} else if strings.HasPrefix(param.TypeString, "*") {
+		param.GoType = POINTER
+	} else {
+		singleGoType := stringToGoType[param.TypeString]
+		if singleGoType == INVALID {
+			singleGoType = STRUCT
+		}
+		param.GoType = singleGoType
+	}
+
+	param.PrintfFormat = stringfFormat(param.GoType)
+	param.CType = goToCType[param.GoType]
+	param.TypeSize = goTypeToSizeInBytes[param.GoType]
 	return nil
 }
 
@@ -351,6 +350,10 @@ func getParameterStackOffsets(target *TraceTarget) error {
 		if target.Parameters[i].GoType == STRING {
 			currentIndex += 8
 		}
+
+		if target.Parameters[i].GoType == SLICE {
+			currentIndex += 16
+		}
 	}
 	return nil
 }
@@ -393,6 +396,7 @@ const (
 	//TODO:
 	STRUCT
 	POINTER
+	SLICE
 )
 
 var goTypeToSizeInBytes = map[goType]int{
@@ -415,6 +419,7 @@ var goTypeToSizeInBytes = map[goType]int{
 	//TODO:
 	STRUCT:  8,
 	POINTER: 8,
+	SLICE:   24,
 }
 
 var goToCType = map[goType]string{
@@ -437,6 +442,7 @@ var goToCType = map[goType]string{
 	//TODO:
 	STRUCT:  "void *",
 	POINTER: "void *",
+	SLICE:   "void *",
 }
 
 func stringfFormat(t goType) string {
@@ -456,7 +462,7 @@ func stringfFormat(t goType) string {
 	case RUNE:
 		return "%c"
 	//TODO:
-	case STRUCT, POINTER:
+	case STRUCT, POINTER, SLICE:
 		return "0x%x"
 	default:
 		return "%v"
@@ -483,6 +489,7 @@ var stringToGoType = map[string]goType{
 	//TODO:
 	"struct":  STRUCT,
 	"pointer": POINTER,
+	"slice":   SLICE,
 }
 
 var goTypeToString = map[goType]string{
@@ -505,6 +512,7 @@ var goTypeToString = map[goType]string{
 	//TODO:
 	STRUCT:  "struct",
 	POINTER: "pointer",
+	SLICE:   "slice",
 }
 
 var supportedTypes = []string{
