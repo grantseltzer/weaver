@@ -2,12 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"log"
 	"os"
-	"path/filepath"
-
-	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -17,6 +14,22 @@ var (
 	globalOutput        = os.Stdout
 	globalError         = os.Stderr
 )
+
+func main() {
+	ir, err := parseFromPath(os.Args[1])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	b, err := json.Marshal(ir.Functions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(b))
+}
+
+/*
 
 func main() {
 
@@ -109,3 +122,4 @@ func entry(c *cli.Context) error {
 
 	return nil
 }
+*/
