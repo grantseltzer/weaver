@@ -3,39 +3,26 @@ package main
 import (
 	"debug/dwarf"
 	"debug/elf"
-	"fmt"
 	"io"
 )
 
 type Gotir struct {
 	Functions []*function_type
 	Structs   []*struct_type
-}
-
-type go_type interface {
-	String() string
+	BaseTypes []*base_type
 }
 
 type struct_type struct {
-	Name   string
-	Size   int64
-	Fields []struct_field
+	Name          string
+	TypeSize      uint64
+	StarintOffset uint // within the struct
+	Fields        []struct_field
 }
 
-func (s *struct_type) String() string {
-	return s.Name
-}
-
-// Note: Can't embed structs/functions because we can't allow to be recursive
-// all types are indexed anyway
 type struct_field struct {
 	Name     string
 	TypeName string
 	Offset   int64
-}
-
-func (f *struct_field) String() string {
-	return fmt.Sprintf("%s %s %s", f.Name, f.Offset, f.TypeName)
 }
 
 type function_type struct {
@@ -43,18 +30,18 @@ type function_type struct {
 	Params []function_param
 }
 
-func (f *function_type) String() string {
-	return fmt.Sprintf("%s %v", f.Name, f.Params)
-}
-
 type function_param struct {
-	Name     string
-	TypeName string
-	TypeSize int64 // how much space it takes on the stack
-	IsReturn bool
+	Name           string
+	TypeName       string
+	StartingOffset uint
+	TypeSize       uint64 // how much space it takes on the stack
+	IsReturn       bool
 }
 
-type interface_type struct{}
+type base_type struct {
+	Name     string
+	TypeSize uint64
+}
 
 // parseFromPath reads in all of the type information from the DWARF section of the ELF at the given patho
 func parseFromPath(path string) (*Gotir, error) {
@@ -108,6 +95,23 @@ entryReadLoop:
 				currentlyReadingFunction = nil
 			}
 			continue entryReadLoop
+		}
+
+		// Read in base types
+		if entry.Tag == dwarf.TagBaseType {
+			newBaseType := &base_type{}
+			for _, field := range entry.Field {
+				if field.Attr == dwarf.AttrName {
+					newBaseType.Name = field.Val.(string)
+
+				}
+
+				if field.Attr == dwarf.AttrByteSize {
+					newBaseType.TypeSize = field.Val.(uint64)
+				}
+			}
+
+			ir.BaseTypes = append(ir.BaseTypes, newBaseType)
 		}
 
 		// Found a struct
