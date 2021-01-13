@@ -3,18 +3,21 @@ package main
 import (
 	"debug/dwarf"
 	"debug/elf"
+	"errors"
+	"fmt"
 	"io"
 )
 
 type Gotir struct {
 	Functions []*function_type
 	Structs   []*struct_type
+	PtrTypes  []*pointer_type
 	BaseTypes []*base_type
 }
 
 type struct_type struct {
 	Name          string
-	TypeSize      uint64
+	TypeSize      int64
 	StarintOffset uint // within the struct
 	Fields        []struct_field
 }
@@ -34,13 +37,18 @@ type function_param struct {
 	Name           string
 	TypeName       string
 	StartingOffset uint
-	TypeSize       uint64 // how much space it takes on the stack
+	TypeSize       int64 // how much space it takes on the stack
 	IsReturn       bool
 }
 
 type base_type struct {
 	Name     string
-	TypeSize uint64
+	TypeSize int64
+}
+
+type pointer_type struct {
+	Name     string
+	TypeName string
 }
 
 // parseFromPath reads in all of the type information from the DWARF section of the ELF at the given patho
@@ -59,6 +67,8 @@ func parseFromPath(path string) (*Gotir, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	checkIfAllTypesAreContainedInGOTIR(ir)
 
 	return ir, nil
 }
@@ -97,7 +107,7 @@ entryReadLoop:
 			continue entryReadLoop
 		}
 
-		// Read in base types
+		// Read in base type
 		if entry.Tag == dwarf.TagBaseType {
 			newBaseType := &base_type{}
 			for _, field := range entry.Field {
@@ -105,13 +115,27 @@ entryReadLoop:
 					newBaseType.Name = field.Val.(string)
 
 				}
-
 				if field.Attr == dwarf.AttrByteSize {
-					newBaseType.TypeSize = field.Val.(uint64)
+					newBaseType.TypeSize = field.Val.(int64)
 				}
 			}
-
 			ir.BaseTypes = append(ir.BaseTypes, newBaseType)
+		}
+
+		// Read in pointer type
+		if entry.Tag == dwarf.TagPointerType {
+			newPtrType := &pointer_type{}
+			for _, field := range entry.Field {
+				if field.Attr == dwarf.AttrName {
+					newPtrType.Name = field.Val.(string)
+				} else if field.Attr == dwarf.AttrType {
+					newPtrType.TypeName, err = readTypeName(typeReader, field.Val.(dwarf.Offset))
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+			ir.PtrTypes = append(ir.PtrTypes, newPtrType)
 		}
 
 		// Found a struct
@@ -194,6 +218,22 @@ func readFunctionParameter(typeReader *dwarf.Reader, entry *dwarf.Entry, current
 	return nil
 }
 
+func readTypeName(typeReader *dwarf.Reader, offset dwarf.Offset) (string, error) {
+
+	typeReader.Seek(offset)
+	typeEntry, err := typeReader.Next()
+	if err != nil {
+		return "", fmt.Errorf("couldn't read type name: %s", err.Error())
+	}
+
+	for i := range typeEntry.Field {
+		if typeEntry.Field[i].Attr == dwarf.AttrName {
+			return typeEntry.Field[i].Val.(string), nil
+		}
+	}
+	return "", errors.New("no type name found")
+}
+
 func readStructInit(entry *dwarf.Entry) *struct_type {
 
 	currentlyReadingStruct := &struct_type{}
@@ -205,7 +245,7 @@ func readStructInit(entry *dwarf.Entry) *struct_type {
 		}
 
 		if field.Attr == dwarf.AttrByteSize {
-			currentlyReadingStruct.Size = field.Val.(int64)
+			currentlyReadingStruct.TypeSize = field.Val.(int64)
 		}
 	}
 
