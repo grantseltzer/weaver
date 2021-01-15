@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 )
@@ -14,17 +16,17 @@ var (
 )
 
 func main() {
-	_, err := parseFromPath(os.Args[1])
+	ir, err := parseFromPath(os.Args[1])
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// b, err := json.Marshal(ir.Functions)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	b, err := json.Marshal(ir.Functions)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// fmt.Println(string(b))
+	fmt.Println(string(b))
 }
 
 /*
