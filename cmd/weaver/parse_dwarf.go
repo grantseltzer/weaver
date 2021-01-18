@@ -3,8 +3,7 @@ package main
 import (
 	"debug/dwarf"
 	"debug/elf"
-	"fmt"
-	"io"
+	"strings"
 )
 
 type Gotir struct {
@@ -20,7 +19,7 @@ type function_param struct {
 	Name           string
 	TypeName       string
 	StartingOffset uint
-	TypeSize       int64 // how much space it takes on the stack
+	TypeSize       int64 // how much space it takes on the stack, in bytes
 	IsReturn       bool
 }
 
@@ -33,14 +32,26 @@ func getSizesAndStackOffsets(ir *Gotir, data *dwarf.Data) {
 	// parameter and their starting offsets
 
 	for _, f := range ir.Functions {
+
 		for _, param := range f.Params {
 			// Use TypeName to find TypeSize, then afterwards calculate StartingOffset
-			x := entryIndex[param.TypeName]
-			if x != nil {
-				fmt.Println("Indexed:", param.TypeName)
+			entry := entryIndex[param.TypeName]
+			if entry == nil {
+				continue
 			}
 
-			// See if x has byte size attr, if not see if it has 'type' or something of the nature, if it's an array have to multiply?
+			// Look for size
+			for i := range entry.Field {
+				if entry.Field[i].Attr == dwarf.AttrByteSize {
+					param.TypeSize = entry.Field[i].Val.(int64)
+				}
+			}
+
+			if param.TypeSize == 0 && strings.HasPrefix(param.Name, "*") {
+				param.TypeSize = 8
+			}
+
+			// TODO: Otherwise just don't support it for now
 
 		}
 	}
@@ -81,7 +92,7 @@ func parseFromData(data *dwarf.Data) (*Gotir, error) {
 entryReadLoop:
 	for {
 		entry, err := lineReader.Next()
-		if err == io.EOF || entry == nil { //FIXME: Is `|| entry == nil` correct?
+		if err == nil && entry == nil {
 			break
 		}
 		if err != nil {
@@ -122,10 +133,16 @@ entryReadLoop:
 func readFunctionInit(entry *dwarf.Entry) *function_type {
 	currentlyReadingFunction := &function_type{}
 
+	isNamedSubroutine := false
 	for _, field := range entry.Field {
 		if field.Attr == dwarf.AttrName {
+			isNamedSubroutine = true
 			currentlyReadingFunction.Name = field.Val.(string)
 		}
+	}
+
+	if !isNamedSubroutine {
+		return nil
 	}
 
 	currentlyReadingFunction.Params = []function_param{}
@@ -140,10 +157,12 @@ func readFunctionParameter(typeReader *dwarf.Reader, entry *dwarf.Entry, current
 	)
 
 	newParam := function_param{IsReturn: false}
+	isNamedParameter := false
 	for _, field := range entry.Field {
 
 		if field.Attr == dwarf.AttrName {
 			newParam.Name = field.Val.(string)
+			isNamedParameter = true
 		}
 
 		if field.Attr == dwarf.AttrVarParam {
@@ -166,8 +185,9 @@ func readFunctionParameter(typeReader *dwarf.Reader, entry *dwarf.Entry, current
 		}
 	}
 
-	currentlyReadingFunction.Params = append(currentlyReadingFunction.Params, newParam)
-
+	if isNamedParameter {
+		currentlyReadingFunction.Params = append(currentlyReadingFunction.Params, newParam)
+	}
 	return nil
 }
 
