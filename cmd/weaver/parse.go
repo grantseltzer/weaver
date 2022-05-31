@@ -3,91 +3,79 @@ package main
 import (
 	"debug/dwarf"
 	"debug/elf"
-	"strings"
+	"errors"
+	"fmt"
 )
 
-type Gotir struct {
-	Functions []*function_type
+type binary_context struct {
+	elf_file          *elf.File
+	text_section_addr uint64
+	syms_to_offset    map[string]uint64
+	Functions         []*function_info
 }
 
-type function_type struct {
-	Name   string
-	Params []function_param
+type function_info struct {
+	Name       string
+	TextOffset uint64
+	Params     []function_parameter
 }
 
-type function_param struct {
+type function_parameter struct {
 	Name           string
 	TypeName       string
-	StartingOffset uint
+	StartingOffset uint64
 	TypeSize       int64 // how much space it takes on the stack, in bytes
 	IsReturn       bool
 }
 
-var entryIndex = map[string]*dwarf.Entry{}
-
-func getSizesAndStackOffsets(ir *Gotir, data *dwarf.Data) {
-	// TODO:
-	// Go through each function in ir.Functions
-	// Iterate over the params, having a dwarf reader go and recursive determine the size on the stack of each
-	// parameter and their starting offsets
-
-	for _, f := range ir.Functions {
-
-		for _, param := range f.Params {
-			// Use TypeName to find TypeSize, then afterwards calculate StartingOffset
-			entry := entryIndex[param.TypeName]
-			if entry == nil {
-				continue
-			}
-
-			// Look for size
-			for i := range entry.Field {
-				if entry.Field[i].Attr == dwarf.AttrByteSize {
-					param.TypeSize = entry.Field[i].Val.(int64)
-				}
-			}
-
-			if param.TypeSize == 0 && strings.HasPrefix(param.Name, "*") {
-				param.TypeSize = 8
-			}
-
-			// TODO: Otherwise just don't support it for now
-
-		}
+func init_binary_context(path string) (*binary_context, error) {
+	e := &binary_context{
+		syms_to_offset: make(map[string]uint64),
 	}
+	f, err := elf.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	e.elf_file = f
+
+	// Collect symbols offset within ELF .text section
+	textSection := e.elf_file.Section(".text")
+	if textSection == nil {
+		return nil, errors.New("no .text section")
+	}
+	e.text_section_addr = textSection.Addr
+
+	syms, err := e.elf_file.Symbols()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, sym := range syms {
+		e.syms_to_offset[sym.Name] = sym.Value - e.text_section_addr
+	}
+
+	// Collect function information from DWARF
+	err = e.parse_dwarf_function_info()
+	if err != nil {
+		return nil, err
+	}
+
+	return e, nil
 }
 
-// parseFromPath reads in all of the type information from the DWARF section of the ELF at the given patho
-func parseFromPath(path string) (*Gotir, error) {
-	elfFile, err := elf.Open(path)
+func (e *binary_context) parse_dwarf_function_info() error {
+	data, err := e.elf_file.DWARF()
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	data, err := elfFile.DWARF()
-	if err != nil {
-		return nil, err
-	}
-
-	ir, err := parseFromData(data)
-	if err != nil {
-		return nil, err
-	}
-
-	getSizesAndStackOffsets(ir, data)
-	return ir, nil
-}
-
-func parseFromData(data *dwarf.Data) (*Gotir, error) {
 
 	lineReader := data.Reader()
 	typeReader := data.Reader()
+	dwarfEntryIndex := map[string]*dwarf.Entry{}
 
-	ir := &Gotir{
-		Functions: []*function_type{},
-	}
+	func_info := []*function_info{}
 
-	var currentlyReadingFunction *function_type = nil
+	currentlyReadingFunction := &function_info{}
 
 entryReadLoop:
 	for {
@@ -96,12 +84,12 @@ entryReadLoop:
 			break
 		}
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if entryIsNull(entry) {
 			if currentlyReadingFunction != nil {
-				ir.Functions = append(ir.Functions, currentlyReadingFunction)
+				func_info = append(func_info, currentlyReadingFunction)
 				currentlyReadingFunction = nil
 			}
 			continue entryReadLoop
@@ -110,28 +98,38 @@ entryReadLoop:
 		// Index all possible types by name for later lookup
 		for _, field := range entry.Field {
 			if field.Attr == dwarf.AttrName {
-				entryIndex[field.Val.(string)] = entry
+				dwarfEntryIndex[field.Val.(string)] = entry
 			}
 		}
 
 		// Found a function
 		if entry.Tag == dwarf.TagSubprogram {
-			currentlyReadingFunction = readFunctionInit(entry)
+			currentlyReadingFunction = e.read_function_init(entry)
 		}
 		// If currently reading the parameters of a function
 		if currentlyReadingFunction != nil && entry.Tag == dwarf.TagFormalParameter {
-			err = readFunctionParameter(typeReader, entry, currentlyReadingFunction)
+			err = read_function_parameter(typeReader, entry, currentlyReadingFunction)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
 
-	return ir, nil
+	e.Functions = func_info
+
+	return nil
 }
 
-func readFunctionInit(entry *dwarf.Entry) *function_type {
-	currentlyReadingFunction := &function_type{}
+func (e *binary_context) symbol_name_to_offset(symbol string) (uint64, error) {
+	offset, ok := e.syms_to_offset[symbol]
+	if !ok {
+		return 0, fmt.Errorf("could not find symbol: %s", symbol)
+	}
+	return offset, nil
+}
+
+func (e *binary_context) read_function_init(entry *dwarf.Entry) *function_info {
+	currentlyReadingFunction := &function_info{}
 
 	isNamedSubroutine := false
 	for _, field := range entry.Field {
@@ -145,18 +143,24 @@ func readFunctionInit(entry *dwarf.Entry) *function_type {
 		return nil
 	}
 
-	currentlyReadingFunction.Params = []function_param{}
+	offset, err := e.symbol_name_to_offset(currentlyReadingFunction.Name)
+	if err != nil {
+		return nil
+	}
+	currentlyReadingFunction.TextOffset = offset
+	currentlyReadingFunction.Params = []function_parameter{}
+
 	return currentlyReadingFunction
 }
 
-func readFunctionParameter(typeReader *dwarf.Reader, entry *dwarf.Entry, currentlyReadingFunction *function_type) error {
+func read_function_parameter(typeReader *dwarf.Reader, entry *dwarf.Entry, currentlyReadingFunction *function_info) error {
 
 	var (
 		typeEntry *dwarf.Entry
 		err       error
 	)
 
-	newParam := function_param{IsReturn: false}
+	newParam := function_parameter{IsReturn: false}
 	isNamedParameter := false
 	for _, field := range entry.Field {
 
