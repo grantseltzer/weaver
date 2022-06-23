@@ -1,56 +1,59 @@
-SHELL := bash
-.ONESHELL:
-.SHELLFLAGS := -eu -o pipefail -c
-.DELETE_ON_ERROR:
-MAKEFLAGS += --warn-undefined-variables
-MAKEFLAGS += --no-builtin-rules
-LIBBPF_SRC := $(abspath ./tp_src/cc/libbpf/src)
+# Compile bpf object
+# compile static libbpf release
+# compile userspace, linked against libbpf.a
 
-ifeq ($(origin .RECIPEPREFIX), undefined)
-  $(error This Make does not support .RECIPEPREFIX. Please use GNU Make 4.0 or later)
-endif
-.RECIPEPREFIX = >
+OUTPUT_DIR ?= ./dist
 
-.PHONY:
-default: src/vmlinux.h .output/libbpf.a install-headers bpf-object gen-skeleton compile-helpers finish
+LIBBPF_OBJDIR = $(abspath ./$(OUTPUT_DIR)/libbpf)
+LIBBPF_OBJ := $(abspath $(LIBBPF_OBJDIR)/libbpf.a)
 
-.PHONY: src/vmlinux.h
-src/vmlinux.h:
-> bin/bpftool btf dump file /sys/kernel/btf/vmlinux format c > src/vmlinux.h
+ARCH := $(shell uname -m | sed 's/x86_64/x86/')
 
-.PHONY: .output/libbpf.a
-.output/libbpf.a:
-> mkdir -p src/.output/libbpf/staticobjs
-> $(MAKE) -C $(LIBBPF_SRC) BUILD_STATIC_ONLY=1            \
-		    OBJDIR=$(dir $@)/libbpf DESTDIR=$(dir $@)	  \
-		    INCLUDEDIR= LIBDIR= UAPIDIR=				  \
-		    install
-> ar rcs $(abspath ./src/.output/libbpf.a) $(LIBBPF_SRC)/.output/libbpf/staticobjs/*.o
+CC = gcc
+CLANG ?= clang
+BPFTOOL ?= bpftool
 
-.PHONY: install-headers
-install-headers:
-> install $(LIBBPF_SRC)/*.h -m 644 ./src/.output
+CFLAGS = -g -O2 -Wall
+LDFLAGS =
+INCLUDES := -I$(OUTPUT_DIR)
 
-.PHONY: bpf-object
-bpf-object:
-> clang -g -O2 -target bpf -D__TARGET_ARCH_x86 -Isrc/.output -c src/weaver.bpf.c -o src/.output/weaver.bpf.o
+LIBBPF_SRC := $(abspath ./libbpf/src)
 
-.PHONY: gen-skeleton
-gen-skeleton:
-> bin/bpftool gen skeleton src/.output/weaver.bpf.o > src/.output/weaver.skel.h
+CGO_CFLAGS_STATIC = "-I$(abspath $(OUTPUT_DIR))"
+CGO_LDFLAGS_STATIC = "-lelf -lz $(LIBBPF_OBJ)"
+CGO_EXTLDFLAGS_STATIC = '-w -extldflags "-static"'
 
-.PHONY: compile-helpers
-compile-helpers:
-> gcc -g -O2 -Wall -Isrc/.output -c src/trace_helpers.c -o src/.output/trace_helpers.o
-> gcc -g -O2 -Wall -Isrc/.output -c src/syscall_helpers.c -o src/.output/syscall_helpers.o
-> gcc -g -O2 -Wall -Isrc/.output -c src/errno_helpers.c -o src/.output/errno_helpers.o
-> gcc -g -O2 -Wall -Isrc/.output -c src/map_helpers.c -o src/.output/map_helpers.o
-> go tool compile -I src/.output ./cmd/weaver/*.go -o src/.output/weaver.o
+GO_SRC := $(wildcard cmd/*.go)
 
-.PHONY: finish
-finish:
-> gcc -g -O2 -Wall src/.output/weaver.o src/.output/libbpf.a src/.output/trace_helpers.o src/.output/syscall_helpers.o src/.output/errno_helpers.o src/.output/map_helpers.o -lelf -lz -o bin/weaver
+default: $(OUTPUT_DIR)/weaver $(OUTPUT_DIR)/tester
 
-.PHONY: clean
+$(OUTPUT_DIR)/libbpf:
+	mkdir -p $@
+
+$(LIBBPF_OBJ): $(LIBBPF_SRC) $(wildcard $(LIBBPF_SRC)/*.[ch]) | $(OUTPUT_DIR)/libbpf
+	CC="$(CC)" CFLAGS="$(CFLAGS)" LD_FLAGS="$(LDFLAGS)" \
+	   $(MAKE) -C $(LIBBPF_SRC) \
+		BUILD_STATIC_ONLY=1 \
+		OBJDIR=$(LIBBPF_OBJDIR) \
+		DESTDIR=$(dir $(LIBBPF_OBJDIR)) \
+		INCLUDEDIR= LIBDIR= UAPIDIR= install
+
+$(OUTPUT_DIR)/weaver.bpf.o: weaver.bpf.c $(LIBBPF_OBJ) vmlinux.h | $(OUTPUT_DIR)
+	$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(ARCH) $(INCLUDES) -c $(filter %.c,$^) -o $@
+
+$(OUTPUT_DIR)/weaver: $(GO_SRC) $(OUTPUT_DIR)/weaver.bpf.o $(LIBBPF_OBJ)
+	CC=$(CLANG) \
+		CGO_CFLAGS=$(CGO_CFLAGS_STATIC) \
+		CGO_LDFLAGS=$(CGO_LDFLAGS_STATIC) \
+		go build \
+		-tags netgo -ldflags $(CGO_EXTLDFLAGS_STATIC) \
+		-o $@ ./cmd/...
+
+$(OUTPUT_DIR)/tester:
+	go build -o $@ ./tester/*.go
+
+$(OUTPUT_DIR):
+	mkdir -p $(OUTPUT_DIR)
+
 clean:
-> rm -rf src/.output
+	rm -rf $(OUTPUT_DIR)
