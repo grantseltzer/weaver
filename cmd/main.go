@@ -14,9 +14,11 @@ import (
 
 func main() {
 
-	pathToTracingProgram := os.Args[1] //todo: validate path
+	bpfProgramName := os.Args[1]
+	pathToTracingProgram := os.Args[2] //todo: validate path
+	symbolName := os.Args[3]
 
-	offset, err := helpers.SymbolToOffset(os.Args[1], os.Args[2])
+	offset, err := helpers.SymbolToOffset(pathToTracingProgram, symbolName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -26,7 +28,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	prog, err := module.GetProgram("generic_function")
+	prog, err := module.GetProgram(bpfProgramName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,6 +41,11 @@ func main() {
 	_, err = prog.AttachUprobe(-1, pathToTracingProgram, uint32(offset))
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if bpfProgramName == "repeat" {
+		repeat()
+		os.Exit(0)
 	}
 
 	eventsChannel := make(chan []byte)
@@ -55,8 +62,10 @@ func main() {
 		x := trace_context{}
 
 		stack := b[:50]
-		x.MemoryStack = *(*Mem_stack)(unsafe.Pointer(&stack))
+		x.Stack = *(*Mem_stack)(unsafe.Pointer(&stack))
 		registers := b[56:]
+
+		//TODO: define an interface for 64/32, ARM/AMD
 		x.Registers.R15 = int64(binary.LittleEndian.Uint64(registers[0:8]))
 		x.Registers.R14 = int64(binary.LittleEndian.Uint64(registers[8:16]))
 		x.Registers.R13 = int64(binary.LittleEndian.Uint64(registers[16:24]))
@@ -91,4 +100,9 @@ func main() {
 
 	rb.Stop()
 	rb.Close()
+}
+
+func repeat() {
+	block := make(chan []byte)
+	<-block
 }

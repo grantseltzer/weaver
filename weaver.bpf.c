@@ -20,8 +20,8 @@ struct out_context {
     struct pt_regs registers;
 };
 
-SEC("uprobe/main.main")
-int generic_function(struct pt_regs *ctx)
+SEC("uprobe/dump")
+int dump(struct pt_regs *ctx)
 {
     struct out_context *out;
     out = bpf_ringbuf_reserve(&events, sizeof(struct out_context), ringbuffer_flags);
@@ -38,17 +38,25 @@ int generic_function(struct pt_regs *ctx)
     for (i = 0; i < 50; i++) {
         bpf_probe_read(tmp.stack+i, sizeof(char), stackAddr+i);
     }
-   
+
     tmp.registers = *ctx;
-   
-
     bpf_probe_read(out, sizeof(tmp), &tmp);
-
-    bpf_printk("[] RAX: %d RBX: %d RCX: %d", out->registers.ax, out->registers.bx, out->registers.cx);
-    bpf_printk("[] DI: %d SI: %d R8: %d", out->registers.di, out->registers.si, out->registers.r8);
-    bpf_printk("[] R9: %d R10: %d R11: %d\n", out->registers.r9, out->registers.r10, out->registers.r11);
-
     bpf_ringbuf_submit(out, ringbuffer_flags);
+    return 0;
+}
+
+SEC("uprobe/repeat")
+int repeat(struct pt_regs *ctx)
+{
+    // Read the address of the calling routine (return address) from the top of the stack
+    void* stackAddr = (void*)ctx->sp;
+    unsigned long returnAddress;
+    bpf_probe_read((void*)&returnAddress, sizeof(returnAddress), stackAddr);
+   
+    // Overwrite the return address with the top of the current routine
+    returnAddress = ctx->ip;
+    bpf_probe_write_user(stackAddr, (void*)&returnAddress, sizeof(returnAddress));
+    
     return 0;
 }
 

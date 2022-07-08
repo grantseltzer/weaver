@@ -1,8 +1,8 @@
 package main
 
 type trace_context struct {
-	MemoryStack Mem_stack
-	Registers   Pt_regs
+	Stack     Mem_stack
+	Registers Pt_regs
 }
 
 type Mem_stack [50]byte

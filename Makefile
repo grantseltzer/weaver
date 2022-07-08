@@ -24,8 +24,9 @@ CGO_LDFLAGS_STATIC = "-lelf -lz $(LIBBPF_OBJ)"
 CGO_EXTLDFLAGS_STATIC = '-w -extldflags "-static"'
 
 GO_SRC := $(wildcard cmd/*.go)
+TESTER_SRC := $(wildcard tester/*.go)
 
-default: $(OUTPUT_DIR)/weaver $(OUTPUT_DIR)/tester
+default: $(OUTPUT_DIR)/weaver $(OUTPUT_DIR)/simple_print $(OUTPUT_DIR)/simple_int
 
 $(OUTPUT_DIR)/libbpf:
 	mkdir -p $@
@@ -49,8 +50,11 @@ $(OUTPUT_DIR)/weaver: $(GO_SRC) $(OUTPUT_DIR)/weaver.bpf.o $(LIBBPF_OBJ)
 		-tags netgo -ldflags $(CGO_EXTLDFLAGS_STATIC) \
 		-o $@ ./cmd/...
 
-$(OUTPUT_DIR)/tester:
-	go build -o $@ ./tester/*.go
+$(OUTPUT_DIR)/simple_print: $(TESTER_SRC)
+	go build -o $@ ./tester/simple_print.go
+
+$(OUTPUT_DIR)/simple_int: $(TESTER_SRC)
+	go build -o $@ ./tester/simple_int.go
 
 $(OUTPUT_DIR):
 	mkdir -p $(OUTPUT_DIR)
