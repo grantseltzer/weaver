@@ -4,7 +4,7 @@
 
 2) Run with:
 
-`$~ sudo ./dist/weaver <target_binary> <target_symbol>`
+`$~ sudo ./dist/weaver dump <target_binary> <target_symbol>`
 
 Now whenever the binary is run and the symbol is executed, weaver will dump the first 50 bytes of the stack, and all registers.
 
@@ -12,7 +12,7 @@ This will only work on x86_64!
 
 For example:
 
-`sudo ./dist/weaver ./dist/tester main.test_combined_int`
+`sudo ./dist/weaver dump ./dist/tester main.test_combined_int`
 
 Running `./dist/tester` should give you:
 
