@@ -1,6 +1,6 @@
 # Weaver
 
-<b>PLEASE READ!</b> - I am currently refactoring Weaver to use libbpf instead of bcc which would include various other major improvements. If you're currently using weaver please be aware that features/bug fixes are being held off until the major refactor occurs. This will be tracked in the branch "refactor"
+<b>PLEASE READ!</b> - This project is inactive. I'm working on this exactly functionality for Datadog as part of the [Dynamic Instrumentation](https://docs.datadoghq.com/dynamic_instrumentation/) product. Check out the datadog agent for code there!
 
 <p align="center">
     <img src="DrManhattanGopher.png" alt="gopher" width="200"/>
