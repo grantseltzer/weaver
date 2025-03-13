@@ -1,6 +1,6 @@
 # Weaver
 
-<b>PLEASE READ!</b> - This project is inactive. I'm working on this exactly functionality for Datadog as part of the [Dynamic Instrumentation](https://docs.datadoghq.com/dynamic_instrumentation/) product. Check out the datadog agent for code there!
+<b>PLEASE READ!</b> - This project is inactive. I'm working on this exact functionality for Datadog as part of the [Dynamic Instrumentation](https://docs.datadoghq.com/dynamic_instrumentation/) product. Check out the [datadog agent for code](https://github.com/DataDog/datadog-agent/tree/main/pkg/dynamicinstrumentation) there!
 
 <p align="center">
     <img src="DrManhattanGopher.png" alt="gopher" width="200"/>
